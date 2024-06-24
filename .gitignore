@@ -8,8 +8,8 @@
 .snapshots/
 #Testing Output folder
 .output/
-#Extension App-file
-
+#Extension sql files
+/db/*.sql
 #Rapid Application Development File
 rad.json
 #Translation Base-file
