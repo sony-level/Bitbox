@@ -16,3 +16,5 @@ rad.json
 *.g.xlf
 #License-file
 *.flf
+#bitbox files
+bitbox_file
