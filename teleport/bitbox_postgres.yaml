@@ -20,7 +20,9 @@ proxy_service:
   enabled: "yes"
   web_listen_addr: 0.0.0.0:443
   public_addr: bitbox-cluster:443
-  https_keypairs: []
+  https_keypairs:
+    - key_file: ../../test/key.pem
+      cert_file: ../../test/cert.pem
   https_keypairs_reload_interval: 0s
   acme:
     enabled: "yes"
