@@ -8,6 +8,8 @@ CREATE TABLE "evaluations" (
   "updated_at" timestamp DEFAULT (now())
 );
 
+CREATE INDEX ON "evaluations" ("class_id");
+
 COMMENT ON TABLE "evaluations" IS 'Stocke les données des évaluations';
 COMMENT ON COLUMN "evaluations"."class_id" IS 'Identifiant de la classe';
 COMMENT ON COLUMN "evaluations"."title" IS 'Titre de l''évaluation';
