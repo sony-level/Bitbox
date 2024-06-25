@@ -52,7 +52,11 @@ obtenir_certificat_lets_encrypt() {
 
 # Fonction pour générer un certificat auto-signé
 generer_certificat_auto_signe() {
-    openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+    local chemin_cle chemin_cert
+    read -p "Entrez le chemin pour sauvegarder votre clé: " chemin_cle
+    read -p "Entrez le chemin pour sauvegarder votre certificat: " chemin_cert
+
+    openssl req -x509 -newkey rsa:4096 -keyout "$chemin_cle" -out "$chemin_cert" -days 365
 }
 
 # Fonction pour mettre à jour le fichier de configuration de Teleport
@@ -62,8 +66,8 @@ mettre_a_jour_config_teleport() {
     read -p "Entrez le chemin vers votre fichier de clé: " chemin_cle
     read -p "Entrez le chemin vers votre fichier de certificat: " chemin_cert
 
-    if [[ ! -f "$chemin_config" ]]; then
-        printf "Le fichier de configuration n'existe pas. Veuillez fournir un chemin valide.\n" >&2
+    if [[ ! -f "$chemin_config" || ! -f "$chemin_cle" || ! -f "$chemin_cert" ]]; then
+        printf "Le fichier de configuration ou les fichiers de clés/certificats n'existent pas. Veuillez fournir des chemins valides.\n" >&2
         return 1
     fi
 
@@ -73,7 +77,7 @@ mettre_a_jour_config_teleport() {
 }
 
 # Fonction principale
-principale() {
+Main() {
     afficher_logo
 
     printf "Choisissez une option:\n"
@@ -113,4 +117,4 @@ principale() {
 }
 
 # Exécuter la fonction principale
-principale
+Main

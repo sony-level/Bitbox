@@ -29,8 +29,8 @@ proxy_service:
     email: sony-dilane-level.mbango@isen.yncrea.fr
 db_service:
   enabled: "yes"
-  postgres_listen_addr: 0.0.0.0:5433
   databases:
-  - name: db_bitbox
+  - name: dbbitbox
+    description: "Bitbox PostgreSQL database"
     protocol: postgres
-    uri: postgres:5433
+    uri: "bitbox-postgres:5432"
