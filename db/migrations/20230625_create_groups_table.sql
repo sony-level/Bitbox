@@ -6,6 +6,7 @@ CREATE TABLE "groups" (
   "updated_at" timestamp DEFAULT (now())
 );
 
+CREATE INDEX ON "groups" ("class_id");
 COMMENT ON TABLE "groups" IS 'Stocke les données des groupes';
 COMMENT ON COLUMN "groups"."group_name" IS 'Nom du groupe';
 COMMENT ON COLUMN "groups"."class_id" IS 'Identifiant de la classe';

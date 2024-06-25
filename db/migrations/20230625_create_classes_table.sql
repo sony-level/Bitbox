@@ -7,6 +7,8 @@ CREATE TABLE "classes" (
   "updated_at" timestamp DEFAULT (now())
 );
 
+CREATE INDEX ON "classes" ("teacher_id");
+
 COMMENT ON TABLE "classes" IS 'Stocke les données des classes';
 COMMENT ON COLUMN "classes"."class_name" IS 'Nom de la classe';
 COMMENT ON COLUMN "classes"."description" IS 'Description de la classe';
