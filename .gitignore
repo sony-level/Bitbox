@@ -18,3 +18,6 @@ rad.json
 *.flf
 #bitbox files
 bitbox_file
+
+#.env file
+*.env
