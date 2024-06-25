@@ -5,14 +5,14 @@ services:
     image: postgres:latest
     container_name: bitbox-postgres
     environment:
-      POSTGRES_DB: bitbox
+      POSTGRES_DB: db_bitbox
       POSTGRES_USER: bitbox_user
       POSTGRES_PASSWORD: bitbox_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/db_bitbox.sql:/docker-entrypoint-initdb.d/db_bitbox.sql
     ports:
-      - "5432:5432"
+      - "5433:5433"
     networks:
       - bitbox-network
 
@@ -26,7 +26,7 @@ services:
       - "3025:3025"
       - "3080:3080"
       - "3024:3024"
-      - "5432:5432"
+      - "5433:5433"
     depends_on:
       - postgres
     networks:
