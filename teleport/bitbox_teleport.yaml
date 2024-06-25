@@ -1,6 +1,6 @@
 version: v3
 teleport:
-  nodename: sony-dilane-level
+  nodename: bitbox-teleport
   data_dir: /var/lib/teleport
   log:
     output: stderr
