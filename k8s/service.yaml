@@ -1,0 +1,13 @@
+# This file is used to create a service for the postgres deployment
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+spec:
+  selector:
+    app: postgres
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: LoadBalancer

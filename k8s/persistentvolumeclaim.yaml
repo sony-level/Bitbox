@@ -1,0 +1,11 @@
+# Description: This file is used to create a persistent volume claim for the postgres database.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
