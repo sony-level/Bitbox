@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    container_name: bitbox_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bitbox_network
+
+  diesel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bitbox_diesel
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+    volumes:
+      - .:/app
+      - ./common/migrations:/app/migrations
+    networks:
+      - bitbox_network
+    entrypoint: ["sh", "/app/entrypoint.sh"]
+
+volumes:
+  postgres_data:
+
+networks:
+  bitbox_network:
+    driver: bridge

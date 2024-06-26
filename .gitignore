@@ -21,3 +21,5 @@ bitbox_file
 
 #.env file
 *.env
+
+/db/migrations/*
