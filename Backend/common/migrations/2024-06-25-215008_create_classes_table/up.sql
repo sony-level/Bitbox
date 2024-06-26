@@ -1,4 +1,5 @@
 -- Your SQL goes here
+
 CREATE TABLE IF NOT EXISTS classes (
     class_id SERIAL PRIMARY KEY,
     class_name VARCHAR(100) NOT NULL,
@@ -9,7 +10,7 @@ CREATE TABLE IF NOT EXISTS classes (
     FOREIGN KEY (teacher_id) REFERENCES users(user_id)
 );
 
-CREATE INDEX ON classes (teacher_id);
+CREATE INDEX IF NOT EXISTS classes_teacher_id_idx ON classes (teacher_id);
 
 COMMENT ON TABLE classes IS 'Stocke les données des classes';
 COMMENT ON COLUMN classes.class_name IS 'Nom de la classe';
