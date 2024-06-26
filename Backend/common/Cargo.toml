@@ -1,6 +1,12 @@
 [package]
 name = "common"
 version = "0.1.0"
+authors = ["level sony-dilane-level.mbango@isen.yncrea.fr"]
 edition = "2021"
 
 [dependencies]
+diesel = { version = "2.2.1", features = ["postgres", "r2d2", "chrono"] }
+dotenv = "0.15.0"
+serde = { version = "1.0", features = ["derive"] }
+chrono = "0.4"
+env_logger = "0.11.3"
