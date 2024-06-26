@@ -1,10 +1,10 @@
 -- Your SQL goes here
 CREATE TABLE IF NOT EXISTS evaluations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    evaluator_id INT REFERENCES users(id) ON DELETE CASCADE,
-    evaluatee_id INT REFERENCES users(id) ON DELETE CASCADE,
-    group_id INT REFERENCES groups(id) ON DELETE CASCADE,
-    project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+    evaluator_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    evaluatee_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     score INT NOT NULL,
     comments TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

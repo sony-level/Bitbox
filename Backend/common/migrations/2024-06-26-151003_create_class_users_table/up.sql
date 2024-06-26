@@ -1,7 +1,7 @@
 -- Your SQL goes here
 CREATE TABLE IF NOT EXISTS class_users (
-    class_id INT REFERENCES classes(id) ON DELETE CASCADE,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     PRIMARY KEY (class_id, user_id)
 );
 
