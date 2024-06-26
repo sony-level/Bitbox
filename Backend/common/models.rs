@@ -4,7 +4,7 @@ use chrono::NaiveDateTime;
 #[derive(Debug, Queryable, Identifiable, Serialize, Deserialize)]
 #[table_name = "users"]
 pub struct User {
-    pub user_id: i32,
+    pub user_id:  Uuid,
     pub username: String,
     pub password_hash: String,
     pub email: String,
@@ -17,10 +17,10 @@ pub struct User {
 #[belongs_to(User, foreign_key = "teacher_id")]
 #[table_name = "classes"]
 pub struct Class {
-    pub class_id: i32,
+    pub class_id:  Uuid,
     pub class_name: String,
     pub description: Option<String>,
-    pub teacher_id: i32,
+    pub teacher_id:  Uuid,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -29,9 +29,9 @@ pub struct Class {
 #[belongs_to(Class)]
 #[table_name = "groups"]
 pub struct Group {
-    pub group_id: i32,
+    pub group_id:  Uuid,
     pub group_name: String,
-    pub class_id: i32,
+    pub class_id:  Uuid,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -41,9 +41,9 @@ pub struct Group {
 #[belongs_to(User, foreign_key = "student_id")]
 #[table_name = "group_members"]
 pub struct GroupMember {
-    pub group_member_id: i32,
-    pub group_id: i32,
-    pub student_id: i32,
+    pub group_member_id:  Uuid,
+    pub group_id:  Uuid,
+    pub student_id:  Uuid,
     pub created_at: NaiveDateTime,
 }
 
@@ -52,11 +52,11 @@ pub struct GroupMember {
 #[belongs_to(User, foreign_key = "leader_id")]
 #[table_name = "projects"]
 pub struct Project {
-    pub project_id: i32,
+    pub project_id:  Uuid,
     pub project_name: String,
     pub description: Option<String>,
-    pub class_id: i32,
-    pub leader_id: i32,
+    pub class_id:  Uuid,
+    pub leader_id:  Uuid,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -65,11 +65,11 @@ pub struct Project {
 #[belongs_to(Class)]
 #[table_name = "evaluations"]
 pub struct Evaluation {
-    pub evaluation_id: i32,
-    pub class_id: i32,
+    pub evaluation_id:  Uuid,
+    pub class_id:  Uuid,
     pub title: String,
     pub description: Option<String>,
-    pub max_score: i32,
+    pub max_score:  Uuid,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -79,10 +79,10 @@ pub struct Evaluation {
 #[belongs_to(User, foreign_key = "student_id")]
 #[table_name = "evaluation_results"]
 pub struct EvaluationResult {
-    pub evaluation_result_id: i32,
-    pub evaluation_id: i32,
-    pub student_id: i32,
-    pub score: i32,
+    pub evaluation_result_id:  Uuid,
+    pub evaluation_id:  Uuid,
+    pub student_id:  Uuid,
+    pub score:  Uuid,
     pub feedback: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -93,9 +93,9 @@ pub struct EvaluationResult {
 #[belongs_to(User, foreign_key = "sender_id")]
 #[table_name = "notifications"]
 pub struct Notification {
-    pub notification_id: i32,
-    pub recipient_id: i32,
-    pub sender_id: i32,
+    pub notification_id:  Uuid,
+    pub recipient_id:  Uuid,
+    pub sender_id:  Uuid,
     pub message: String,
     pub read: bool,
     pub created_at: NaiveDateTime,
@@ -105,8 +105,8 @@ pub struct Notification {
 #[belongs_to(Class)]
 #[table_name = "reports"]
 pub struct Report {
-    pub report_id: i32,
-    pub class_id: i32,
+    pub report_id:  Uuid,
+    pub class_id:  Uuid,
     pub report_title: String,
     pub report_content: String,
     pub created_at: NaiveDateTime,
@@ -119,11 +119,11 @@ pub struct Report {
 #[belongs_to(User, foreign_key = "evaluatee_id")]
 #[table_name = "peer_evaluations"]
 pub struct PeerEvaluation {
-    pub peer_evaluation_id: i32,
-    pub evaluation_id: i32,
-    pub evaluator_id: i32,
-    pub evaluatee_id: i32,
-    pub score: i32,
+    pub peer_evaluation_id:  Uuid,
+    pub evaluation_id:  Uuid,
+    pub evaluator_id:  Uuid,
+    pub evaluatee_id:  Uuid,
+    pub score:  Uuid,
     pub feedback: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,

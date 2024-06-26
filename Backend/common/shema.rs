@@ -3,7 +3,7 @@ table! {
     use crate::models::*;
 
     users (user_id) {
-        user_id -> Int4,
+        user_id -> Uuid,
         username -> Varchar,
         password_hash -> Varchar,
         email -> Varchar,
@@ -18,10 +18,10 @@ table! {
     use crate::models::*;
 
     classes (class_id) {
-        class_id -> Int4,
+        class_id -> Uuid,
         class_name -> Varchar,
         description -> Nullable<Text>,
-        teacher_id -> Int4,
+        teacher_id -> Uuid,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -32,9 +32,9 @@ table! {
     use crate::models::*;
 
     groups (group_id) {
-        group_id -> Int4,
+        group_id -> Uuid,
         group_name -> Varchar,
-        class_id -> Int4,
+        class_id -> Uuid,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -45,9 +45,9 @@ table! {
     use crate::models::*;
 
     group_members (group_member_id) {
-        group_member_id -> Int4,
-        group_id -> Int4,
-        student_id -> Int4,
+        group_member_id -> Uuid,
+        group_id -> Uuid,
+        student_id -> Uuid,
         created_at -> Timestamp,
     }
 }
@@ -57,11 +57,11 @@ table! {
     use crate::models::*;
 
     projects (project_id) {
-        project_id -> Int4,
+        project_id -> Uuid,
         project_name -> Varchar,
         description -> Nullable<Text>,
-        class_id -> Int4,
-        leader_id -> Int4,
+        class_id -> Uuid,
+        leader_id -> Uuid,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -72,11 +72,11 @@ table! {
     use crate::models::*;
 
     evaluations (evaluation_id) {
-        evaluation_id -> Int4,
-        class_id -> Int4,
+        evaluation_id -> Uuid,
+        class_id -> Uuid,
         title -> Varchar,
         description -> Nullable<Text>,
-        max_score -> Int4,
+        max_score -> Uuid,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -87,10 +87,10 @@ table! {
     use crate::models::*;
 
     evaluation_results (evaluation_result_id) {
-        evaluation_result_id -> Int4,
-        evaluation_id -> Int4,
-        student_id -> Int4,
-        score -> Int4,
+        evaluation_result_id -> Uuid,
+        evaluation_id -> Uuid,
+        student_id -> Uuid,
+        score -> Uuid,
         feedback -> Nullable<Text>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
@@ -102,9 +102,9 @@ table! {
     use crate::models::*;
 
     notifications (notification_id) {
-        notification_id -> Int4,
-        recipient_id -> Int4,
-        sender_id -> Int4,
+        notification_id -> Uuid,
+        recipient_id -> Uuid,
+        sender_id -> Uuid,
         message -> Text,
         read -> Bool,
         created_at -> Timestamp,
@@ -116,8 +116,8 @@ table! {
     use crate::models::*;
 
     reports (report_id) {
-        report_id -> Int4,
-        class_id -> Int4,
+        report_id -> Uuid,
+        class_id -> Uuid,
         report_title -> Varchar,
         report_content -> Text,
         created_at -> Timestamp,
@@ -130,11 +130,11 @@ table! {
     use crate::models::*;
 
     peer_evaluations (peer_evaluation_id) {
-        peer_evaluation_id -> Int4,
-        evaluation_id -> Int4,
-        evaluator_id -> Int4,
-        evaluatee_id -> Int4,
-        score -> Int4,
+        peer_evaluation_id -> Uuid,
+        evaluation_id -> Uuid,
+        evaluator_id -> Uuid,
+        evaluatee_id -> Uuid,
+        score -> Uuid,
         feedback -> Nullable<Text>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
