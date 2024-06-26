@@ -1,6 +1,6 @@
 -- Your SQL goes here
 CREATE TABLE IF NOT EXISTS evaluations (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     evaluator_id INT REFERENCES users(id) ON DELETE CASCADE,
     evaluatee_id INT REFERENCES users(id) ON DELETE CASCADE,
     group_id INT REFERENCES groups(id) ON DELETE CASCADE,

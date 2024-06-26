@@ -1,6 +1,6 @@
 -- Your SQL goes here
 CREATE TABLE IF NOT EXISTS projects (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_name VARCHAR(100) NOT NULL,
     class_id INT REFERENCES classes(id) ON DELETE CASCADE,
     descriptions TEXT,
