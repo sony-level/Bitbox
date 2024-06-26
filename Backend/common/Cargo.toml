@@ -1,8 +1,9 @@
 [package]
 name = "common"
 version = "0.1.0"
+authors = ["Level sony"]
 edition = "2021"
 
 [dependencies]
-diesel = { version = "2.2.1", features = ["postgres"] }
+diesel = { version = "2.2.1", features = ["postgres" ,  "r2d2"] }
 dotenv = "0.15.0"
