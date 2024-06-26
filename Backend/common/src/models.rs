@@ -1,9 +1,12 @@
-use super::schema::{users, classes, projects, class_users, group_users, evaluations, evaluation_results, notifications};
+use super::schema::{
+    users, classes, projects, class_users, group_users, evaluations, evaluation_results, notifications,
+};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use diesel::pg::Pg;
 use diesel::serialize::{self, ToSql};
+use diesel::pg::types::PgValue;
 use diesel::deserialize::{self, FromSql};
 use diesel::sql_types::Text;
 use diesel::prelude::*;
@@ -29,7 +32,7 @@ impl<DB: diesel::backend::Backend> ToSql<Text, DB> for UserRole {
 }
 
 impl FromSql<Text, Pg> for UserRole {
-    fn from_sql(bytes: Option<&[u8]>) -> deserialize::Result<Self> {
+    fn from_sql(value: diesel::pg::PgValue<'_>) -> deserialize::Result<Self> {
         match not_none!(bytes) {
             b"trainer" => Ok(UserRole::Trainer),
             b"student" => Ok(UserRole::Student),
@@ -38,15 +41,19 @@ impl FromSql<Text, Pg> for UserRole {
     }
 }
 
-#[derive(Queryable, Debug, Identifiable)]
-#[diesel(primary_key(class_id, user_id))]
+#[derive(Queryable, Debug, Identifiable, Associations)]
+#[belongs_to(User)]
+#[belongs_to(Class)]
+#[table_name = "class_users"]
+#[primary_key(class_id, user_id)]
 pub struct ClassUser {
     pub class_id: Uuid,
     pub user_id: Uuid,
 }
 
 #[derive(Queryable, Debug, Identifiable)]
-#[diesel(primary_key(id))]
+#[table_name = "classes"]
+#[primary_key(id)]
 pub struct Class {
     pub id: Uuid,
     pub name: String,
@@ -57,7 +64,10 @@ pub struct Class {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug, Identifiable, Associations)]
+#[belongs_to(User)]
+#[table_name = "evaluation_results"]
+#[primary_key(id)]
 pub struct EvaluationResult {
     pub id: Uuid,
     pub user_id: Option<Uuid>,
@@ -68,7 +78,12 @@ pub struct EvaluationResult {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug, Identifiable, Associations)]
+#[belongs_to(User, foreign_key = "evaluator_id")]
+#[belongs_to(User, foreign_key = "evaluatee_id")]
+#[belongs_to(Project)]
+#[table_name = "evaluations"]
+#[primary_key(id)]
 pub struct Evaluation {
     pub id: Uuid,
     pub evaluator_id: Option<Uuid>,
@@ -81,15 +96,19 @@ pub struct Evaluation {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Queryable, Debug, Identifiable)]
-#[diesel(primary_key(group_id, user_id))]
+#[derive(Queryable, Debug, Identifiable, Associations)]
+#[belongs_to(User)]
+#[belongs_to(Group)]
+#[table_name = "group_users"]
+#[primary_key(group_id, user_id)]
 pub struct GroupUser {
     pub group_id: Uuid,
     pub user_id: Uuid,
 }
 
-#[derive(Queryable, Debug)]
-#[diesel(primary_key(id))]
+#[derive(Queryable, Debug, Identifiable)]
+#[table_name = "groups"]
+#[primary_key(id)]
 pub struct Group {
     pub id: Uuid,
     pub group_name: String,
@@ -98,8 +117,10 @@ pub struct Group {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Queryable, Debug)]
-#[diesel(primary_key(id))]
+#[derive(Queryable, Debug, Identifiable, Associations)]
+#[belongs_to(User)]
+#[table_name = "notifications"]
+#[primary_key(id)]
 pub struct Notification {
     pub id: Uuid,
     pub user_id: Option<Uuid>,
@@ -109,8 +130,10 @@ pub struct Notification {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Queryable, Debug)]
-#[diesel(primary_key(id))]
+#[derive(Queryable, Debug, Identifiable, Associations)]
+#[belongs_to(Class)]
+#[table_name = "projects"]
+#[primary_key(id)]
 pub struct Project {
     pub id: Uuid,
     pub project_name: String,
@@ -122,8 +145,9 @@ pub struct Project {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Queryable, Debug)]
-#[diesel(primary_key(id))]
+#[derive(Queryable, Debug, Identifiable)]
+#[table_name = "users"]
+#[primary_key(id)]
 pub struct User {
     pub id: Uuid,
     pub email: String,
