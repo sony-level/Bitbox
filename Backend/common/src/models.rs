@@ -5,6 +5,7 @@
 use super::schema::{
     users, classes, projects, class_users, group_users, evaluations, evaluation_results, notifications, groups,
 };
+use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use diesel_derive_enum::DbEnum;
 use chrono::NaiveDate;
 use chrono::NaiveDateTime;
@@ -26,9 +27,7 @@ use utoipa::ToSchema;
  * UserRole enum
  * enumération des rôles des utilisateurs
  */
-#[derive(
-    DbEnum, Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Ord, PartialOrd, ToSchema,
-)]
+#[derive(DbEnum, Debug, Copy, Clone, PartialEq, Eq, Deserialize, Serialize, Ord, PartialOrd, ToSchema,)]
 #[ExistingTypePath = "crate::schema::sql_types::UserRole"]
 pub enum UserRole {
     #[db_rename = "trainer"]
@@ -40,10 +39,8 @@ pub enum UserRole {
 /**
  * EvaluationType enum
  * enumération des types d'évaluations
- */
-#[derive(
-    DbEnum, Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Ord, PartialOrd, ToSchema,
-)]
+ 
+#[derive(DbEnum, Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Ord, PartialOrd, ToSchema,)]
 #[ExistingTypePath = "crate::schema::sql_types::EvaluationType"]
 pub enum EvaluationType {
     #[db_rename = "peer"]
@@ -53,6 +50,7 @@ pub enum EvaluationType {
     #[db_rename = "trainer"]
     Trainer,  // Évaluation par le formateur
 }
+*/
 
 /**
  * ClassUser model
@@ -72,7 +70,7 @@ pub struct ClassUser {
  * Class model
  * la table classes contient les informations des classes
  */
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug, Identifiable, Clone)]
 #[diesel(table_name = classes)]
 #[diesel(primary_key(id))]
 pub struct Class {
@@ -89,7 +87,7 @@ pub struct Class {
  * EvaluationResult model
  * la table evaluation_results contient les informations des résultats des évaluations
  */
-#[derive(Queryable, Debug, Identifiable, Associations)]
+#[derive(Insertable ,Clone ,Queryable, Debug, Identifiable, Associations)]
 #[diesel(belongs_to(User))]
 #[diesel(table_name = evaluation_results)]
 #[diesel
