@@ -70,7 +70,7 @@ pub struct ClassUser {
  * Class model
  * la table classes contient les informations des classes
  */
-#[derive(Queryable, Debug, Identifiable, Clone)]
+#[derive(Queryable, Debug, Identifiable, Clone)] 
 #[diesel(table_name = classes)]
 #[diesel(primary_key(id))]
 pub struct Class {
