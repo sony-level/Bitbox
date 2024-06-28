@@ -1,7 +1,12 @@
 
+#![allow(unused)]
+#![allow(clippy::all)]
+
 use super::schema::{
     users, classes, projects, class_users, group_users, evaluations, evaluation_results, notifications, groups,
 };
+use diesel_derive_enum::DbEnum;
+use chrono::NaiveDate;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -12,51 +17,41 @@ use diesel::sql_types::Text;
 use diesel::prelude::*;
 use diesel::backend::{Backend};
 use std::io::Write;
+use std::fmt;
+use utoipa::ToSchema;
 
 
-// use diesel::associations::HasTable;
 
-#[derive(Debug, Serialize, Deserialize, AsExpression, FromSqlRow)]
-#[diesel(sql_type = diesel::sql_types::Text)]
+/**
+ * UserRole enum
+ * enumération des rôles des utilisateurs
+ */
+#[derive(
+    DbEnum, Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Ord, PartialOrd, ToSchema,
+)]
+#[ExistingTypePath = "crate::schema::sql_types::UserRole"]
 pub enum UserRole {
-    #[serde(rename = "trainer")]
+    #[db_rename = "trainer"]
     Trainer,  // Formateur
-    #[serde(rename = "student")]
+    #[db_rename = "student"]
     Student,  // Étudiant
 }
 
 /**
- * UserRole enum
- * enum pour les rôles des utilisateurs
- * trainer: formateur
- * student: étudiant
- * Cette implémentation est nécessaire pour convertir l'énumération UserRole en une valeur textuelle qui peut être stockée dans la base de données. 
- * Diesel utilise cette implémentation pour insérer  et mettre à jour les valeurs UserRole dans les colonnes de type Text. 
- * Diesel utilise également cette implémentation pour lire les valeurs de la base de données et les convertir en valeurs UserRole.
+ * EvaluationType enum
+ * enumération des types d'évaluations
  */
-impl<DB> ToSql<Text, DB> for UserRole
-where
-    DB: Backend,
-{
-    fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
-        let s = match *self {
-            UserRole::Trainer => "trainer",
-            UserRole::Student => "student",
-        };
-        out.write_all(s.as_bytes())?;
-        Ok(serialize::IsNull::No)
-    }
-}
-
-// Implémentation pour convertir SQL en UserRole
-impl FromSql<Text, Pg> for UserRole {
-    fn from_sql(value: PgValue<'_>) -> deserialize::Result<Self> {
-        match std::str::from_utf8(value.as_bytes())? {
-            "trainer" => Ok(UserRole::Trainer),
-            "student" => Ok(UserRole::Student),
-            _ => Err("Unrecognized enum variant".into()),
-        }
-    }
+#[derive(
+    DbEnum, Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Ord, PartialOrd, ToSchema,
+)]
+#[ExistingTypePath = "crate::schema::sql_types::EvaluationType"]
+pub enum EvaluationType {
+    #[db_rename = "peer"]
+    Peer,  // Évaluation par les pairs
+    #[db_rename = "self_evaluation"]
+    SelfEvaluation,  // Auto-évaluation
+    #[db_rename = "trainer"]
+    Trainer,  // Évaluation par le formateur
 }
 
 /**
