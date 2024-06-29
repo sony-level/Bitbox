@@ -1,0 +1,10 @@
+/home/kali/Desktop/Bitbox_project/Bitbox/Backend/common/target/debug/deps/liberror_chain-9f6f08230f681311.rmeta: /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/lib.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/impl_error_chain_kind.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/error_chain.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/quick_main.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/backtrace.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/example_generated.rs
+
+/home/kali/Desktop/Bitbox_project/Bitbox/Backend/common/target/debug/deps/error_chain-9f6f08230f681311.d: /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/lib.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/impl_error_chain_kind.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/error_chain.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/quick_main.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/backtrace.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/example_generated.rs
+
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/lib.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/impl_error_chain_kind.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/error_chain.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/quick_main.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/backtrace.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/error-chain-0.12.4/src/example_generated.rs:

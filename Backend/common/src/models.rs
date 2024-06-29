@@ -3,8 +3,9 @@
 #![allow(clippy::all)]
 
 use super::schema::{
-    users, classes, projects, class_users, group_users, evaluations, evaluation_results, notifications, groups,
+    users, classes, projects, class_users, group_users, evaluations, evaluation_results, notifications, groups, auth_tokens,
 };
+
 use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use diesel_derive_enum::DbEnum;
 use chrono::NaiveDate;
@@ -52,11 +53,20 @@ pub enum EvaluationType {
 }
 */
 
+#[derive(Queryable, Debug, Identifiable)]
+pub struct AuthToken {
+    pub id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub token: String,
+    pub created_at: Option<NaiveDateTime>,
+    pub expires_at: NaiveDateTime,
+}
+
 /**
  * ClassUser model
  * la table class_users contient les informations des utilisateurs dans les classes
  */
-#[derive(Queryable, Debug, Identifiable, Associations)]
+#[derive(Queryable, Debug, Identifiable, Associations,  Insertable, Serialize, Deserialize )]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Class))]
 #[diesel(table_name = class_users)]
@@ -70,7 +80,7 @@ pub struct ClassUser {
  * Class model
  * la table classes contient les informations des classes
  */
-#[derive(Queryable, Debug, Identifiable, Clone)] 
+#[derive(Queryable, Debug, Identifiable, Clone,  Insertable, Serialize, Deserialize)] 
 #[diesel(table_name = classes)]
 #[diesel(primary_key(id))]
 pub struct Class {

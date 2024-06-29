@@ -17,7 +17,7 @@
 3. **Déployer les ressources avec Docker Compose :**
 
     ```bash
-    cd database
+    cd common
     docker-compose up -d
     ```
 

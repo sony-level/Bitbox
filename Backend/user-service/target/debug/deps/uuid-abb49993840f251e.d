@@ -1,0 +1,14 @@
+/home/kali/Desktop/Bitbox_project/Bitbox/Backend/user-service/target/debug/deps/libuuid-abb49993840f251e.rmeta: /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/lib.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/builder.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/error.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/parser.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/fmt.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/timestamp.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/v4.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/rng.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/external.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/macros.rs
+
+/home/kali/Desktop/Bitbox_project/Bitbox/Backend/user-service/target/debug/deps/uuid-abb49993840f251e.d: /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/lib.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/builder.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/error.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/parser.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/fmt.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/timestamp.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/v4.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/rng.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/external.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/macros.rs
+
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/lib.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/builder.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/error.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/parser.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/fmt.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/timestamp.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/v4.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/rng.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/external.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/uuid-1.9.1/src/macros.rs:
