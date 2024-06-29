@@ -7,6 +7,17 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    auth_tokens (id) {
+        id -> Uuid,
+        user_id -> Nullable<Uuid>,
+        #[max_length = 255]
+        token -> Varchar,
+        created_at -> Nullable<Timestamp>,
+        expires_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     class_users (class_id, user_id) {
         class_id -> Uuid,
         user_id -> Uuid,
@@ -107,12 +118,15 @@ diesel::table! {
         first_name -> Varchar,
         #[max_length = 100]
         last_name -> Varchar,
+        #[max_length = 255]
+        password_hash -> Varchar,
         role -> UserRole,
         created_at -> Nullable<Timestamp>,
         updated_at -> Nullable<Timestamp>,
     }
 }
 
+diesel::joinable!(auth_tokens -> users (user_id));
 diesel::joinable!(class_users -> classes (class_id));
 diesel::joinable!(class_users -> users (user_id));
 diesel::joinable!(evaluation_results -> projects (group_id));
@@ -126,6 +140,7 @@ diesel::joinable!(notifications -> users (user_id));
 diesel::joinable!(projects -> classes (class_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    auth_tokens,
     class_users,
     classes,
     evaluation_results,
