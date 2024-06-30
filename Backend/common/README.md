@@ -1,31 +1,20 @@
 # Bitbox Project - PostgreSQL Deployment
 
-## Instructions de Déploiement
 
-1. **Construire l'image Docker :**
+## Prérequis
 
-    ```bash
-    docker build -t your-dockerhub-username/bitbox-postgres:latest .
-    ```
+- [Docker](https://www.docker.com/get-started)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
-2. **Pousser l'image Docker sur Docker Hub :**
 
-    ```bash
-    docker push your-dockerhub-username/bitbox-postgres:latest
-    ```
+## Installation et utilisation
 
-3. **Déployer les ressources avec Docker Compose :**
+1. Clonez le dépôt et naviguez dans le répertoire `common` :
 
-    ```bash
-    cd common
-    docker-compose up -d
-    ```
+   ```bash
+   git clone https://github.com/sony-level/Bitbox.git
+   cd Bitbox/Backend/common
 
-4. **Vérifier que le service PostgreSQL est en cours d'exécution :**
-
-    ```bash
-    docker ps
-    ```
 
 ## Notes
 

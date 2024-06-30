@@ -3,9 +3,8 @@
 #![allow(clippy::all)]
 
 use super::schema::{
-    users, classes, projects, class_users, group_users, evaluations, evaluation_results, notifications, groups, auth_tokens,
+    users, classes, projects, class_users, group_users, evaluations, evaluation_results, notifications, groups, auth_tokens
 };
-
 use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use diesel_derive_enum::DbEnum;
 use chrono::NaiveDate;
@@ -37,23 +36,7 @@ pub enum UserRole {
     Student,  // Étudiant
 }
 
-/**
- * EvaluationType enum
- * enumération des types d'évaluations
- 
-#[derive(DbEnum, Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Ord, PartialOrd, ToSchema,)]
-#[ExistingTypePath = "crate::schema::sql_types::EvaluationType"]
-pub enum EvaluationType {
-    #[db_rename = "peer"]
-    Peer,  // Évaluation par les pairs
-    #[db_rename = "self_evaluation"]
-    SelfEvaluation,  // Auto-évaluation
-    #[db_rename = "trainer"]
-    Trainer,  // Évaluation par le formateur
-}
-*/
-
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug, Identifiable , Deserialize, Serialize)]
 pub struct AuthToken {
     pub id: Uuid,
     pub user_id: Option<Uuid>,
@@ -66,7 +49,7 @@ pub struct AuthToken {
  * ClassUser model
  * la table class_users contient les informations des utilisateurs dans les classes
  */
-#[derive(Queryable, Debug, Identifiable, Associations,  Insertable, Serialize, Deserialize )]
+#[derive(Queryable, Debug, Identifiable, Associations , Deserialize, Serialize)]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Class))]
 #[diesel(table_name = class_users)]
@@ -80,7 +63,7 @@ pub struct ClassUser {
  * Class model
  * la table classes contient les informations des classes
  */
-#[derive(Queryable, Debug, Identifiable, Clone,  Insertable, Serialize, Deserialize)] 
+#[derive(Queryable, Debug, Identifiable, Deserialize, Serialize)] 
 #[diesel(table_name = classes)]
 #[diesel(primary_key(id))]
 pub struct Class {
@@ -97,7 +80,7 @@ pub struct Class {
  * EvaluationResult model
  * la table evaluation_results contient les informations des résultats des évaluations
  */
-#[derive(Insertable ,Clone ,Queryable, Debug, Identifiable, Associations)]
+#[derive(Queryable, Debug, Identifiable, Associations, Deserialize, Serialize)]
 #[diesel(belongs_to(User))]
 #[diesel(table_name = evaluation_results)]
 #[diesel
@@ -116,7 +99,7 @@ pub struct EvaluationResult {
  * Evaluation model
  * la table evaluations contient les informations des évaluations
  */
-#[derive(Queryable, Debug, Identifiable, Associations)]
+#[derive(Queryable, Debug, Identifiable, Associations, Deserialize, Serialize )]
 #[diesel(belongs_to(User, foreign_key = evaluator_id, foreign_key = evaluatee_id))]
 #[diesel(belongs_to(Group))]
 #[diesel(belongs_to(Project))]
@@ -138,7 +121,7 @@ pub struct Evaluation {
  * GroupUser model
  * la table group_users contient les informations des utilisateurs dans les groupes
  */
-#[derive(Queryable, Debug, Identifiable, Associations)]
+#[derive(Queryable, Debug, Identifiable, Associations , Deserialize, Serialize)]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Group))]
 #[diesel(table_name = group_users)]
@@ -151,7 +134,7 @@ pub struct GroupUser {
  * Group model
  * la table groups contient les informations des groupes
  */
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug , Identifiable , Deserialize, Serialize)]
 #[diesel(table_name = groups)]
 #[diesel(primary_key(id))]
 pub struct Group {
@@ -166,7 +149,7 @@ pub struct Group {
  * Notification model
  * la table notifications contient les informations des notifications
  */
-#[derive(Queryable, Debug, Identifiable, Associations)]
+#[derive(Queryable, Debug, Identifiable, Associations , Deserialize, Serialize)]
 #[diesel(belongs_to(User))]
 #[diesel(table_name = notifications)]
 #[diesel(primary_key(id))]
@@ -183,7 +166,7 @@ pub struct Notification {
  * Project model
  * la table projects contient les informations des projets
  */
-#[derive(Queryable, Debug, Identifiable, Associations)]
+#[derive(Queryable, Debug, Identifiable, Associations , Deserialize, Serialize)]
 #[diesel(belongs_to(Class))]
 #[diesel(table_name = projects)]
 #[diesel(primary_key(id))]
@@ -202,7 +185,7 @@ pub struct Project {
  * User model
  * la table users contient les informations des utilisateurs
  */
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug, Identifiable , Deserialize, Serialize)]
 #[diesel(table_name = users)]
 #[diesel(primary_key(id))]
 pub struct User {
