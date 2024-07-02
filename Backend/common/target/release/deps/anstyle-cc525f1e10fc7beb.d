@@ -1,0 +1,12 @@
+/home/kali/Desktop/Bitbox_project/Bitbox/Backend/common/target/release/deps/libanstyle-cc525f1e10fc7beb.rmeta: /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/lib.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/macros.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/color.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/effect.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/reset.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/style.rs
+
+/home/kali/Desktop/Bitbox_project/Bitbox/Backend/common/target/release/deps/libanstyle-cc525f1e10fc7beb.rlib: /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/lib.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/macros.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/color.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/effect.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/reset.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/style.rs
+
+/home/kali/Desktop/Bitbox_project/Bitbox/Backend/common/target/release/deps/anstyle-cc525f1e10fc7beb.d: /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/lib.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/macros.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/color.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/effect.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/reset.rs /home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/style.rs
+
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/lib.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/macros.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/color.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/effect.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/reset.rs:
+/home/kali/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anstyle-1.0.7/src/style.rs:
