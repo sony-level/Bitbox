@@ -19,9 +19,6 @@ use rocket::serde::json::json;
 use domain::models::{User, NewUser};
 //use common::schema::sql_types::UserRole as DbUserRole;
 
-
-
-
 fn hash_password(password: &str) -> String {
     let mut hasher = Sha512::new();
     hasher.update(password.as_bytes());
@@ -60,6 +57,25 @@ pub fn create_user(new_user: Json<NewUser>, pool: &State<Pool>) -> Result<status
     }
 }
 
+/**
+ * Récupérer tous les utilisateurs
+ * @param pool : la connexion à la base de données
+ * @return la liste des utilisateurs
+ * @throws InternalServerError si la connexion à la base de données ne fonctionne pas
+ * @see establish_connection
+ * @see users
+ */
+#[rocket::get("/users")]
+pub fn get_users(pool: &State<Pool>) -> Result<status::Custom<Json<Vec<User>>>, status::Custom<JsonValue>> {
+    let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
+    match users.load::<User>(&mut conn) {
+        Ok(users_list) => Ok(Custom(Status::Ok, Json(users_list))),
+        Err(err) => Err(Custom(
+            Status::InternalServerError,
+            json!({ "error": err.to_string() })
+        )),
+    }
+}
 #[get("/user")]
 pub fn index() -> &'static str {
     "Hello, world!"
