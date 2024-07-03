@@ -3,7 +3,7 @@
 #![allow(clippy::all)]
 
 use super::schema::{
-    users, classes, projects, class_users, group_users, evaluations, evaluation_results, notifications, groups, auth_tokens
+     classes, projects, class_users, group_users, evaluations, evaluation_results, notifications, groups, auth_tokens
 };
 use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use diesel_derive_enum::DbEnum;
@@ -145,7 +145,9 @@ pub struct Evaluation {
  * GroupUser model
  * la table group_users contient les informations des utilisateurs dans les groupes
  */
-#[derive(Queryable, Debug, Identifiable, Associations , Deserialize, Serialize)]
+
+#[derive(Queryable)]
+#[derive(Debug, Identifiable, Associations , Deserialize, Serialize)]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Group))]
 #[diesel(table_name = group_users)]
@@ -209,7 +211,9 @@ pub struct Project {
  * User model
  * la table users contient les informations des utilisateurs
  */
-#[derive(Queryable, Debug, Identifiable , Deserialize, Serialize , Clone , Insertable)]
+use super::schema::users; 
+#[derive(Queryable)]
+#[derive(Debug, Identifiable , Deserialize, Serialize , Clone , Insertable)]
 #[diesel(table_name = users)]
 #[diesel(primary_key(id))]
 pub struct User {
@@ -217,11 +221,17 @@ pub struct User {
     pub email: String,
     pub first_name: String,
     pub last_name: String,
+    pub password_hash: String,
     pub role: UserRole,
     pub created_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
 }
 
+
+/**
+ * NewUser model
+ * la table users contient les informations des utilisateurs
+ */
 #[derive(Queryable ,Insertable, Deserialize ,Serialize)]
 #[diesel(table_name = users)]
 pub struct NewUser<'a> {
