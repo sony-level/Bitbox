@@ -24,4 +24,7 @@ bitbox_file
 
 /db/*/*.sql
 
-migrations/*
+*/target
+*/cargo.lock
+
+cargo.log
