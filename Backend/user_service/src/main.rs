@@ -1,9 +1,8 @@
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate diesel;
+extern crate diesel;
 
 mod handlers;
 mod routes;
-
 
 use common::db::establish_connection;
 
