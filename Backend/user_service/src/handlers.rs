@@ -16,8 +16,7 @@ use rocket::{
     serde::{json::Json, json::Value as JsonValue} ,
  };
 use rocket::serde::json::json;
-use domain::models::{User, NewUser};
-//use common::schema::sql_types::UserRole as DbUserRole;
+use domain::models::{User, NewUser , UserDisplay };
 
 fn hash_password(password: &str) -> String {
     let mut hasher = Sha512::new();
@@ -66,16 +65,21 @@ pub fn create_user(new_user: Json<NewUser>, pool: &State<Pool>) -> Result<status
  * @see users
  */
 #[rocket::get("/users")]
-pub fn get_users(pool: &State<Pool>) -> Result<status::Custom<Json<Vec<User>>>, status::Custom<JsonValue>> {
+pub fn get_users(pool: &State<Pool>) -> Result<status::Custom<Json<Vec<UserDisplay>>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
     match users.load::<User>(&mut conn) {
-        Ok(users_list) => Ok(Custom(Status::Ok, Json(users_list))),
+        Ok(users_list) => { //
+            let display_users: Vec<UserDisplay> = users_list.into_iter().map(|user| user.into()).collect(); // convertir les utilisateurs  en JSON pour les afficher dans l'API
+            Ok(Custom(Status::Ok, Json(display_users))) // renvoyer la liste des utilisateurs sous forme de JSON
+        },
         Err(err) => Err(Custom(
             Status::InternalServerError,
             json!({ "error": err.to_string() })
         )),
     }
 }
+
+
 #[get("/user")]
 pub fn index() -> &'static str {
     "Hello, world!"
