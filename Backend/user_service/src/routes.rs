@@ -6,15 +6,16 @@ use rocket::Route;
  * @example
     * routes![
     *     create_user,
-    *     get_user,
+    *     get_users,
+    *     get_users_by_id,
     *     update_user,
     *     delete_user
     * ]
  */
 pub fn routes() -> Vec<Route> {
     routes![
-        crate::handlers::create_user
-       // crate::handlers::get_user,
+        crate::handlers::create_user,
+        crate::handlers::get_users,
         //crate::handlers::update_user,
         //crate::handlers::delete_user
     ]
