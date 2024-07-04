@@ -17,9 +17,8 @@ use rocket::{
     self,
     serde::{json::Json, json::Value as JsonValue} ,
  };
-//use rocket::serde::json;
 use domain::models::{User, NewUser , UserDisplay , UpdateUser };
-//use rocket_akapi::openapi;
+use rocket_okapi::openapi;
 
 fn hash_password(password: &str) -> String {
     let mut hasher = Sha512::new();
@@ -35,6 +34,7 @@ fn hash_password(password: &str) -> String {
     * @throws InternalServerError si la connexion à la base de données ne fonctionne pas
  */
 
+#[openapi]
 #[rocket::post("/users", format = "application/json", data = "<new_user>")]
 pub fn create_user(new_user: Json<NewUser>, pool: &State<Pool>) -> Result<status::Custom<Json<User>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
@@ -68,7 +68,7 @@ pub fn create_user(new_user: Json<NewUser>, pool: &State<Pool>) -> Result<status
  * @see establish_connection
  * @see users
  */
-
+#[openapi]
 #[rocket::get("/users")]
 pub fn get_users(pool: &State<Pool>) -> Result<status::Custom<Json<Vec<UserDisplay>>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
@@ -93,7 +93,7 @@ pub fn get_users(pool: &State<Pool>) -> Result<status::Custom<Json<Vec<UserDispl
  * @see establish_connection
  * @see users
  */
-
+#[openapi]
 #[rocket::get("/users/<id>")]
 pub fn get_users_by_id(id: Uuid, pool: &State<Pool>) -> Result<status::Custom<Json<UserDisplay>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
@@ -119,7 +119,7 @@ pub fn get_users_by_id(id: Uuid, pool: &State<Pool>) -> Result<status::Custom<Js
  * @see establish_connection
  * @see users
  */
-
+#[openapi]
 #[rocket::put("/users/<id>", format = "application/json", data = "<user>")]
 pub fn update_user(id: Uuid, user: Json<UpdateUser>, pool: &State<Pool>) -> Result<status::Custom<Json<User>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
@@ -135,6 +135,7 @@ pub fn update_user(id: Uuid, user: Json<UpdateUser>, pool: &State<Pool>) -> Resu
 }
 
 //
+#[openapi]
 #[get("/user")]
 pub fn index() -> &'static str {
     "Hello, world!"
