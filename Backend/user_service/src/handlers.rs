@@ -3,6 +3,7 @@
 extern crate common;
 extern crate domain;
 
+use serde_json::json;
 use domain::schema::users::dsl::users;
 use diesel::prelude::*;
 use rocket::State;
@@ -16,7 +17,7 @@ use rocket::{
     self,
     serde::{json::Json, json::Value as JsonValue} ,
  };
-//use rocket::serde::json::json;
+//use rocket::serde::json;
 use domain::models::{User, NewUser , UserDisplay , UpdateUser };
 //use rocket_akapi::openapi;
 
