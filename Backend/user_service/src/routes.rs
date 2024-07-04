@@ -16,6 +16,7 @@ pub fn routes() -> Vec<Route> {
     routes![
         crate::handlers::create_user,
         crate::handlers::get_users,
+        crate::handlers::get_users_by_id,
         //crate::handlers::update_user,
         //crate::handlers::delete_user
     ]
