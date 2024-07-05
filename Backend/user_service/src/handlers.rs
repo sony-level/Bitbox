@@ -55,7 +55,6 @@ pub fn create_user(new_user: Json<NewUser>, pool: &State<Pool>) -> Result<status
     let hashed_password = hash_password(&new_user.password_hash);
     let new_user = NewUser {
         password_hash: &hashed_password,
-        t
         created_at: Some(Utc::now().naive_utc()),
         updated_at: Some(Utc::now().naive_utc()),
         ..new_user.into_inner()
