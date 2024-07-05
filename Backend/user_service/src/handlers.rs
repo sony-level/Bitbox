@@ -3,6 +3,8 @@
 extern crate common;
 extern crate domain;
 
+//use utoipa::{OpenApi, ToSchema};
+use rocket::{put, get, post};
 use serde_json::json;
 use domain::schema::users::dsl::users;
 use diesel::prelude::*;
@@ -18,12 +20,24 @@ use rocket::{
     serde::{json::Json, json::Value as JsonValue} ,
  };
 use domain::models::{User, NewUser , UserDisplay , UpdateUser };
-use rocket_okapi::openapi;
 
-fn hash_password(password: &str) -> String {
+
+
+
+/**
+ * Hasherle mdp
+ * @param password : le mot de passe à hasher
+ * @return le mot de passe hashé
+ */
+pub fn hash_password(password: &str) -> String {
     let mut hasher = Sha512::new();
     hasher.update(password.as_bytes());
-    format!("{:x}", hasher.finalize())
+    let hash_result = hasher.finalize();
+    let hex_string = hash_result.iter()
+        .map(|byte| format!("{:056x}", byte))
+        .collect::<Vec<String>>()
+        .join("");
+    hex_string
 }
 
 /**
@@ -34,19 +48,17 @@ fn hash_password(password: &str) -> String {
     * @throws InternalServerError si la connexion à la base de données ne fonctionne pas
  */
 
-#[openapi]
-#[rocket::post("/users", format = "application/json", data = "<new_user>")]
+#[post("/users", format = "application/json", data = "<new_user>")]
 pub fn create_user(new_user: Json<NewUser>, pool: &State<Pool>) -> Result<status::Custom<Json<User>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
     
     let hashed_password = hash_password(&new_user.password_hash);
     let new_user = NewUser {
         password_hash: &hashed_password,
+        t
         created_at: Some(Utc::now().naive_utc()),
         updated_at: Some(Utc::now().naive_utc()),
         ..new_user.into_inner()
-
-        
     };
     match diesel::insert_into(users)
         .values(&new_user)
@@ -68,8 +80,8 @@ pub fn create_user(new_user: Json<NewUser>, pool: &State<Pool>) -> Result<status
  * @see establish_connection
  * @see users
  */
-#[openapi]
-#[rocket::get("/users")]
+
+#[get("/users")]
 pub fn get_users(pool: &State<Pool>) -> Result<status::Custom<Json<Vec<UserDisplay>>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
     match users.load::<User>(&mut conn) {
@@ -93,8 +105,8 @@ pub fn get_users(pool: &State<Pool>) -> Result<status::Custom<Json<Vec<UserDispl
  * @see establish_connection
  * @see users
  */
-#[openapi]
-#[rocket::get("/users/<id>")]
+
+#[get("/users/<id>")]
 pub fn get_users_by_id(id: Uuid, pool: &State<Pool>) -> Result<status::Custom<Json<UserDisplay>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
     match users.find(id).first::<User>(&mut conn) {
@@ -119,8 +131,8 @@ pub fn get_users_by_id(id: Uuid, pool: &State<Pool>) -> Result<status::Custom<Js
  * @see establish_connection
  * @see users
  */
-#[openapi]
-#[rocket::put("/users/<id>", format = "application/json", data = "<user>")]
+
+#[put("/users/<id>", format = "application/json", data = "<user>")]
 pub fn update_user(id: Uuid, user: Json<UpdateUser>, pool: &State<Pool>) -> Result<status::Custom<Json<User>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
     let user = user.into_inner();
@@ -135,7 +147,7 @@ pub fn update_user(id: Uuid, user: Json<UpdateUser>, pool: &State<Pool>) -> Resu
 }
 
 //
-#[openapi]
+
 #[get("/user")]
 pub fn index() -> &'static str {
     "Hello, world!"
