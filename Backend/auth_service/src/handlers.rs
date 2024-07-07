@@ -4,22 +4,13 @@ extern crate domain;
 use crate::models::Verify2FARequest;
 use domain::models::{User, NewUser};
 use domain::schema::*;
-//use common::db::establish_connection;
 use diesel::prelude::*;
 use rocket::http::Status;
 use common::db::Pool;
-//use rocket::request::{self, FromRequest, Request};
-//use serde_json::json;
 use rocket::State;
 use crate::models::{AuthenticatedUser, RegisterRequest, LoginRequest };
 use crate::utils::{hash_password, generate_token, verify_password, generate_totp_secret, generate_totp_qr_code, validate_token, verify_totp_code};
-//use jsonwebtoken::{encode ,Header, EncodingKey, Algorithm};
-//use uuid::Uuid;
 use chrono::Utc;
-//use std::time::{SystemTime, UNIX_EPOCH};
-//use google_authenticator::verify_code;
-//use rocket::figment::Source::Custom;
-//use rocket::response::status;
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
@@ -122,7 +113,7 @@ pub async fn login(login_request: Json<LoginRequest>, pool: &State<Pool>) -> Res
  * @return statut de la vérification
  * @throws Unauthorized si le code TOTP est invalide
  */
-#[rocket::post("/verify-2fa", format = "application/json", data = "<verify_2fa_request>")]
+#[rocket::post("/2fa/verify", format = "application/json", data = "<verify_2fa_request>")]
 pub async fn verify_2fa(verify_2fa_request: Json<Verify2FARequest>, pool: &State<Pool>) -> Result<Status, Status> {
     let mut conn = pool.get().map_err(|_| Status::ServiceUnavailable)?;
     if let Some(user_id) = verify_2fa_request.user_id {
