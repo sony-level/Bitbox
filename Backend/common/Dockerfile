@@ -1,14 +1,11 @@
-
 FROM rust:latest
-
+LABEL authors="sony-level"
 
 WORKDIR /usr/src/app
 
+COPY Cargo.toml diesel.toml  Cargoo.lock./
 
-COPY Cargo.toml diesel.toml ./
-
-
-COPY src ./src
+COPY common ./common
 
 COPY migrations ./migrations
 
@@ -16,6 +13,5 @@ COPY migrations ./migrations
 RUN cargo install diesel_cli --no-default-features --features postgres
 
 RUN cargo build --release
-
 
 CMD ["./target/release/common"]
