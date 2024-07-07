@@ -43,3 +43,7 @@ features = ["json" , "uuid" ]
 [dependencies.rocket_okapi]
 version = "0.8.0"
 features = ["rapidoc", "swagger"]
+
+[[bin]]
+name = "auth_service"
+path = "src/main.rs"
