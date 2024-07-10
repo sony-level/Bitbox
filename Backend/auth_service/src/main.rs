@@ -2,7 +2,7 @@
 extern crate diesel;
 
 mod handlers;
-mod routes;
+//mod routes;
 mod utils;
 mod models;
 
@@ -12,7 +12,7 @@ mod models;
 use rocket::{ Build, Rocket};
 use rocket::http::Method;
 use rocket_cors::{AllowedOrigins, CorsOptions};
-use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
+//use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 
 /**
  * Lancer le serveur Rocket
@@ -26,7 +26,7 @@ fn rocket() -> Rocket<Build> {
     //let figment = Figment::from(Config::default())
         //.merge(("openapi.title", "Auth Service"));
 
-        //.merge(("tls", TlsConfig::from_paths("/path/to/your/cert.pem", "/path/to/your/key.pem")));
+        //.merge(("tls", TlsConfig::from_paths("cert/cert.pem", "cert/key.pem")));
 
     let cors = CorsOptions::default()
         .allowed_origins(AllowedOrigins::all())
@@ -46,16 +46,17 @@ fn rocket() -> Rocket<Build> {
             routes![
                 handlers::register,
                 handlers::login,
+                handlers::logout,
                 handlers::verify_2fa,
-                //handlers::admin_route,
-                //handlers::get_user,
+                handlers::totp_setup,
+                handlers::reset_password,
+                handlers::forgot_password,
+
             ],
         )
-      .mount("/swagger", make_swagger_ui(&SwaggerUIConfig {
-            url: "/openapi.json".to_string(),
-            ..Default::default()
-        }))
+
 }
+
 
 
 // Compare this snippet from Bitbox/Backend/auth_service/src/handlers.rs:
