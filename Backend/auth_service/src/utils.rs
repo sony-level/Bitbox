@@ -3,23 +3,22 @@ use jsonwebtoken::{encode, Header, EncodingKey, Validation, TokenData, DecodingK
 use uuid::Uuid;
 use chrono::Utc;
 use crate::models:: ClaimsType;
-use std::str;
+use std::{env, str};
 use std::fmt::Write;
 use base64::Engine;
 use base64::engine::general_purpose;
-//use dotenv::dotenv;
-//use std::env;
-//use std::time::{SystemTime, UNIX_EPOCH};
-//use otpauth::HOTP;
-//use rocket::futures::TryFutureExt;
-use qrcodegen::{QrCode, QrCodeEcc};
-//use serde::{Deserialize, Serialize};
+use qrcodegen::{QrCode as QrCodeGen, QrCodeEcc};
+use qrcode::QrCode;
 use jsonwebtoken::errors::Error as JwtError;
 use google_authenticator::GoogleAuthenticator;
 use once_cell::sync::{ OnceCell};
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-//use domain::models::auth_tokens::user_id;
-
+use qrcode::render::svg;
+use std::result::Result;
+//use svg::Document;
+use data_encoding::BASE64;
+use lettre::{Message, SmtpTransport, Transport};
+use lettre::transport::smtp::authentication::Credentials;
 
 static GA_AUTH: OnceCell<GoogleAuthenticator> = OnceCell::new();
 
@@ -76,7 +75,7 @@ pub fn generate_token(id: Uuid )-> String {
     token
 }
 
-/*
+/**
     * verifier le token d'authentification
     * @param token : le token d'authentification
     * @return l'identifiant de l'utilisateur
@@ -99,11 +98,12 @@ fn go_auth() -> &'static GoogleAuthenticator { //
     * @param user_id : l'identifiant de l'utilisateur
     * @return le code OTP
     */
-pub fn generate_totp_secret(email: &str, _id: Uuid) -> Result<(String, String), String> {
+pub fn generate_totp_secret(email: &str, id: Uuid) -> Result<(String, String ), String> {
+    let sec = generate_user_secret(id);
     let secret = go_auth().create_secret(32);
     let account_name = utf8_percent_encode(email, NON_ALPHANUMERIC).to_string();
-    let issuer_name = utf8_percent_encode("Bitbox", NON_ALPHANUMERIC).to_string();
-    let uri = format!("oauth://totp/{}?secret={}&issuer={}", account_name, secret, issuer_name);
+    let issuer_name = utf8_percent_encode(sec.as_str(), NON_ALPHANUMERIC).to_string(); // TDO: changer le nom de l'émetteur
+    let uri = format!("otpauth://totp/{}?secret={}&issuer={}", account_name, secret, issuer_name);
 
     Ok((secret, uri))
 }
@@ -114,7 +114,7 @@ pub fn generate_totp_secret(email: &str, _id: Uuid) -> Result<(String, String), 
  * @return l'image du QR code en base64
  */
 pub fn generate_totp_qr_code(uri: &str) -> Result<String, String> {
-    let qr = QrCode::encode_text(uri, QrCodeEcc::High).map_err(|e| e.to_string())?;
+    let qr = QrCodeGen::encode_text(uri, QrCodeEcc::High).map_err(|e| e.to_string())?;
     let svg = qr_to_svg_string(&qr, 4);
     let encoded = general_purpose::STANDARD.encode(svg);
     let result = format!("data:image/svg+xml;base64,{}", encoded);
@@ -127,7 +127,7 @@ pub fn generate_totp_qr_code(uri: &str) -> Result<String, String> {
  * @param border : la taille de la bordure
  * @return la chaîne SVG
  */
-fn qr_to_svg_string(qr: &QrCode, border: i32) -> String {
+pub fn qr_to_svg_string(qr: &QrCodeGen, border: i32) -> String {
     let mut result = String::new();
     write!(result, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n").unwrap();
     write!(result, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 {} {}\">\n",
@@ -158,3 +158,41 @@ pub fn verify_totp_code(secret: &str, code: &str) -> bool {
     go_auth().verify_code(secret, code, 3, 0)
 }
 
+
+pub fn generate_reset_token(user_id: Uuid) -> String {
+    let expiration = Utc::now().timestamp() + 3600 * 24; // Token expiré après 24 heures
+    let user_secret = generate_user_secret(user_id);
+    let claims = ClaimsType {
+        sub: user_id,
+        exp: expiration as usize,
+    };
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(user_secret.as_ref())).unwrap()
+}
+
+pub fn send_reset_email(email: &str, reset_token: &str) -> Result<(), String> {
+    dotenv::dotenv().ok();
+
+    let smtp_username = env::var("SMTP_USERNAME").map_err(|e| e.to_string())?;
+    let smtp_password = env::var("SMTP_PASSWORD").map_err(|e| e.to_string())?;
+    let smtp_server = env::var("SMTP_SERVER").map_err(|e| e.to_string())?;
+    let smtp_from_email = env::var("SMTP_FROM_EMAIL").map_err(|e| e.to_string())?;
+
+    let email_body = format!("Pour réinitialiser votre mot de passe, cliquez sur le lien suivant : https://localhost:3000/reset_password?token={}", reset_token);
+    let email = Message::builder()
+        .from(smtp_from_email.parse().unwrap())
+        .to(email.parse().unwrap())
+        .subject("Demande de réinitialisation du mot de passe")
+        .body(email_body)
+        .map_err(|e| e.to_string())?;
+
+    let creds = Credentials::new(smtp_username.to_string(), smtp_password.to_string());
+
+    let mailer = SmtpTransport::relay(&smtp_server)
+        .unwrap()
+        .credentials(creds)
+        .build();
+
+    mailer.send(&email).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
