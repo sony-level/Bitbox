@@ -1,7 +1,8 @@
 extern crate common;
 extern crate domain;
 
-
+use chrono::NaiveDateTime;
+use diesel::{Insertable, Queryable};
 //use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -12,14 +13,14 @@ use domain::models::UserRole;
 /**
  * Représente un utilisateur
  */
-#[derive(Deserialize, Serialize,)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct RegisterRequest {
     pub email: String,
     pub first_name: String,
     pub last_name: String,
     pub password: String,
-    pub totp_secret: String,
-    pub role: UserRole,
+   // pub totp_secret: String,
+   // pub role: UserRole,
 }
 
 /**
@@ -32,6 +33,7 @@ pub struct LoginRequest {
     pub token: Option<String>
 }
 
+
 /**
     *
     */
@@ -41,12 +43,13 @@ pub struct ClaimsType {
     pub exp: usize,
 }
 
-#[derive( Serialize, Deserialize)]
+#[derive(Queryable, Debug, Serialize, Deserialize)]
 pub struct AuthenticatedUser {
     pub id: Uuid,
     pub role: UserRole,
     pub token: String,
     pub totp_qr_code: Option<String>,
+
 }
 #[derive(Deserialize , Serialize)]
 pub struct Verify2FARequest {
@@ -54,3 +57,32 @@ pub struct Verify2FARequest {
     pub totp_code: String,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct PasswordChangeRequest {
+    pub current_password: String,
+    pub new_password: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct TotpSetupResponse {
+    pub secret: String,
+    pub uri: String,
+    pub qr_code: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct LogoutRequest {
+    pub token: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct ForgotPasswordRequest {
+    pub email: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct ResetPasswordRequest {
+    pub token: String,
+    pub new_password: String,
+    pub user_id: Uuid,
+}
