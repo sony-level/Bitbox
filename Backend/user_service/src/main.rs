@@ -3,6 +3,7 @@ extern crate diesel;
 
 mod handlers;
 mod routes;
+mod guard;
 
 use common::db::establish_connection;
 
