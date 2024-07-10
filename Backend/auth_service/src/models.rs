@@ -23,10 +23,7 @@ pub struct RegisterRequest {
    // pub role: UserRole,
 }
 
-#[derive(Serialize)]
-pub struct LoginResponse {
-    pub message: String,
-}
+
 /**
     * Représente une demande de connexion
     */
@@ -76,7 +73,7 @@ pub struct TotpSetupResponse {
 
 #[derive(Deserialize, Serialize)]
 pub struct LogoutRequest {
-    pub token: String,
+    pub  user_id : String,
 }
 
 #[derive(Deserialize, Serialize)]
