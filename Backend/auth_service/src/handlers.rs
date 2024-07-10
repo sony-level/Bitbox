@@ -2,10 +2,11 @@ extern crate common;
 extern crate domain;
 
 
+
 use rocket::response::status::{Custom, NoContent};
 
 use crate::models::{ClaimsType, ForgotPasswordRequest, LogoutRequest, ResetPasswordRequest, TotpSetupResponse, Verify2FARequest};
-use domain::models::{User, NewUser, UserRole, NewAuthToken, AuthToken};
+use domain::models::{User, NewUser, UserRole, NewAuthToken, AuthToken , Response, Error};
 use domain::schema::*;
 use diesel::prelude::*;
 use rocket::http::Status;
@@ -133,47 +134,46 @@ pub fn register(register_request: Json<RegisterRequest>, pool: &State<Pool>) -> 
 * $ curl -X POST http://localhost:8000/api/v1/login -H "Content-Type: application/json" -d '{"email": "test", "password": "test"}'
 */
 #[rocket::post("/login", format = "application/json", data = "<login_request>")]
-pub async fn login(login_request: Json<LoginRequest>, pool: &State<Pool>) -> Result<Json<AuthenticatedUser>, Status> {
+pub  fn login(login_request: Json<LoginRequest>, pool: &State<Pool>) -> Result<Json<Response>, Status> {
 
-
-    // Récupérer une connexion à la base de données depuis le pool
     let mut conn = pool.get().map_err(|_| Status::ServiceUnavailable)?;
 
-    // Trouver l'utilisateur par email dans la base de données
     let user = users::table
         .filter(users::email.eq(&login_request.email))
         .first::<User>(&mut conn)
         .map_err(|_| Status::Unauthorized)?;
 
-    // Si un token est fourni, le valider
-    if let Some(ref token) = login_request.token {
-        let valid_token = auth_tokens::table
-            .filter(auth_tokens::token.eq(token))
-            .filter(auth_tokens::user_id.eq(user.id))
-            .first::<AuthToken>(&mut conn)
-            .optional()
-            .map_err(|_| Status::InternalServerError)?;
+    let valid_token = auth_tokens::table
+        .filter(auth_tokens::user_id.eq(user.id))
+        .filter(auth_tokens::expires_at.gt(chrono::Utc::now().naive_utc()))
+        .first::<AuthToken>(&mut conn)
+        .optional()
+        .map_err(|_| Status::InternalServerError)?;
 
-        if valid_token.is_some() {
-            return Ok(Json(AuthenticatedUser {
-                id: user.id,
-                role: user.role,
-                token: token.clone(),
-                totp_qr_code: None,
-            }));
+    if let Some(ref token) = login_request.token {
+        if let Some(valid_token) = valid_token {
+            if valid_token.token == *token {
+                return Ok(Json(Response {
+                    message: "Login successful".to_string(),
+                }));
+            }
         }
     }
-//si  le token est expiere ou n'ex pas dem
+
     if let Some(password) = &login_request.password {
         if verify_password(password.to_string(), &user.password_hash) {
+            diesel::delete(auth_tokens::table
+                .filter(auth_tokens::user_id.eq(user.id)))
+                .execute(&mut conn)
+                .map_err(|_| Status::InternalServerError)?;
 
             let token = generate_token(user.id);
-            let expires_at = Utc::now().naive_utc() + chrono::Duration::days(2); //date d'expiration du token
+            let expires_at = chrono::Utc::now().naive_utc() + chrono::Duration::days(2); // 2 heure avant expiration
             let new_auth_token = NewAuthToken {
                 id: Uuid::new_v4(),
                 user_id: Some(user.id),
                 token: &token,
-                created_at: Some(Utc::now().naive_utc()),
+                created_at: Some(chrono::Utc::now().naive_utc()),
                 expires_at,
             };
 
@@ -189,15 +189,11 @@ pub async fn login(login_request: Json<LoginRequest>, pool: &State<Pool>) -> Res
                 }
             }
 
-            return Ok(Json(AuthenticatedUser {
-                id: user.id,
-                role: user.role,
-                token: token,
-                totp_qr_code: None, // QR code nn requis lors de la connexion
+            return Ok(Json(Response {
+                message: "Login successful".to_string(),
             }));
         }
     }
-
     Err(Status::Unauthorized)
 }
 
@@ -208,16 +204,23 @@ pub async fn login(login_request: Json<LoginRequest>, pool: &State<Pool>) -> Res
 * @return statut de la deconnexion
 * @throws InternalServerError si la connexion à la base de données ne fonctionne pas
 * @see establish_connection
-*$ curl -X POST http://localhost:8000/api/v1/logout -H "Content-Type: application/json" -d '{"token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkMzIwZjQzZi1mZjQwLTQwZjYtYjIwZi1mZjQwZjYtYjIwZi1mZjQwZjYtYjIwZiIsImV4cCI6MTYyNjQwNjYwMn0.1Z6Z9J
+*$ curl -X POST http://localhost:8000/api/v1/logout -H "Content-Type: application/json" -d '{"id": "test"}'
 */
 #[post("/logout", format = "application/json", data = "<request>")]
-pub fn logout(request: Json<LogoutRequest>, pool: &State<Pool>) -> Result<NoContent, Custom<Value>> {
-    let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Service unavailable"})))?;
+pub fn logout(request: Json<LogoutRequest>, pool: &State<Pool>) -> Result<Json<Response>, Status> {
+    let mut conn = pool.get().map_err(|_| Status::ServiceUnavailable)?;
 
-    delete(auth_tokens::table.filter(auth_tokens::token.eq(&request.token)))
-        .execute(&mut conn)
-        .map(|_| NoContent)
-        .map_err(|_| Custom(Status::InternalServerError, json!({"error": "Failed to delete token"})))
+    let user_id_uuid = match Uuid::parse_str(&request.user_id) {
+        Ok(uuid) => uuid,
+        Err(_) => return Err(Status::BadRequest),
+    };
+
+ match diesel::delete(auth_tokens::table
+        .filter(auth_tokens::user_id.eq(user_id_uuid)))
+        .execute(&mut conn) {
+        Ok(_) => Ok(Json(Response { message: "Logout successful".to_string() })),
+        Err(_) => Err(Status::InternalServerError),
+    }
 }
 
 /**
