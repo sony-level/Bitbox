@@ -23,6 +23,10 @@ pub struct RegisterRequest {
    // pub role: UserRole,
 }
 
+#[derive(Serialize)]
+pub struct LoginResponse {
+    pub message: String,
+}
 /**
     * Représente une demande de connexion
     */
