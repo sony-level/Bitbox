@@ -1,17 +1,9 @@
-FROM rust:latest
+FROM rust:latest AS builder
 LABEL authors="sony-level"
-
 WORKDIR /app
-
-COPY Cargo.toml Cargo.lock ./
-
-RUN cargo build --release
-
 COPY . .
-
 RUN cargo build --release
 
-EXPOSE 8000
-
-CMD ["./target/release/auth_service"]
-
+FROM debian:buster-slim
+COPY --from=builder /app/target/release/auth_service /usr/local/bin/
+CMD ["auth_service"]
