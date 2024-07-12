@@ -5,6 +5,7 @@ use chrono::NaiveDateTime;
 use diesel::{Insertable, Queryable};
 //use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use domain::models::UserRole;
@@ -13,7 +14,7 @@ use domain::models::UserRole;
 /**
  * Représente un utilisateur
  */
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug , ToSchema)]
 pub struct RegisterRequest {
     pub email: String,
     pub first_name: String,
@@ -23,11 +24,10 @@ pub struct RegisterRequest {
    // pub role: UserRole,
 }
 
-
 /**
     * Représente une demande de connexion
     */
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize , ToSchema)]
 pub struct LoginRequest {
     pub email: String,
     pub password:  Option<String>,
@@ -44,7 +44,7 @@ pub struct ClaimsType {
     pub exp: usize,
 }
 
-#[derive(Queryable, Debug, Serialize, Deserialize)]
+#[derive(Queryable, Debug, Serialize, Deserialize ,ToSchema)]
 pub struct AuthenticatedUser {
     pub id: Uuid,
     pub role: UserRole,
@@ -52,13 +52,13 @@ pub struct AuthenticatedUser {
     pub totp_qr_code: Option<String>,
 
 }
-#[derive(Deserialize , Serialize)]
+#[derive(Deserialize , Serialize, ToSchema)]
 pub struct Verify2FARequest {
     pub user_id: Option<Uuid>,
     pub totp_code: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize , ToSchema)]
 pub struct PasswordChangeRequest {
     pub current_password: String,
     pub new_password: String,
@@ -71,17 +71,17 @@ pub struct TotpSetupResponse {
     pub qr_code: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize , ToSchema)]
 pub struct LogoutRequest {
     pub  user_id : String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize , ToSchema)]
 pub struct ForgotPasswordRequest {
     pub email: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize , ToSchema)]
 pub struct ResetPasswordRequest {
     pub token: String,
     pub new_password: String,
