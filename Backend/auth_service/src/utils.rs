@@ -19,6 +19,11 @@ use std::result::Result;
 use data_encoding::BASE64;
 use lettre::{Message, SmtpTransport, Transport};
 use lettre::transport::smtp::authentication::Credentials;
+use rand::Rng;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use argon2::password_hash::rand_core::OsRng;
+use argon2::password_hash::SaltString;
+use lettre::message::{header, SinglePart};
 
 static GA_AUTH: OnceCell<GoogleAuthenticator> = OnceCell::new();
 
@@ -28,9 +33,10 @@ static GA_AUTH: OnceCell<GoogleAuthenticator> = OnceCell::new();
  * @return le mot de passe hashé
  */
 pub fn hash_password(password: &str) -> String {
-    let mut hasher = Sha512::new();
-    hasher.update(password.as_bytes());
-    format!("{:x}", hasher.finalize())
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    let password_hash = argon2.hash_password(password.as_bytes(), &salt).unwrap().to_string();
+    password_hash
 }
 
 /**
@@ -40,9 +46,9 @@ pub fn hash_password(password: &str) -> String {
     * @return le mot de passe hashé
  */
 pub fn verify_password(password: String, hash: &str) -> bool {
-    hash_password(&password) == hash
+    let parsed_hash = PasswordHash::new(hash).unwrap();
+    Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok()
 }
-
 /**
  * Générer un secret utilisateur
  * @param user_id : l'identifiant de l'utilisateur
@@ -185,14 +191,62 @@ pub fn send_reset_email(email: &str, reset_token: &str) -> Result<(), String> {
         .body(email_body)
         .map_err(|e| e.to_string())?;
 
-    let creds = Credentials::new(smtp_username.to_string(), smtp_password.to_string());
+    let creds = Credentials::new(smtp_username, smtp_password);
 
     let mailer = SmtpTransport::relay(&smtp_server)
-        .unwrap()
+        .map_err(|e| e.to_string())?
         .credentials(creds)
         .build();
 
     mailer.send(&email).map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
+    dotenv::dotenv().ok();
+
+    let smtp_username = env::var("SMTP_USERNAME").map_err(|e| e.to_string())?;
+    let smtp_password = env::var("SMTP_PASSWORD").map_err(|e| e.to_string())?;
+    let smtp_server = env::var("SMTP_SERVER").map_err(|e| e.to_string())?;
+    let smtp_from_email = env::var("SMTP_FROM_EMAIL").map_err(|e| e.to_string())?;
+    let smtp_port = env::var("SMTP_PORT").map_err(|e| e.to_string())?;
+
+    println!("SMTP Username: {}", smtp_username);
+    println!("SMTP Server: {}", smtp_server);
+    println!("SMTP Port: {}", smtp_port);
+    println!("SMTP From Email: {}", smtp_from_email);
+
+    let email_body = format!("Pour confirmer votre inscription, cliquez sur le lien suivant : https://localhost:3000/confirm_registration?token={}", token);
+    let email = Message::builder()
+        .from(smtp_from_email.parse().unwrap())
+        .to(email.parse().unwrap())
+        .subject("Confirmation d'inscription")
+        .header(header::ContentType::TEXT_PLAIN)
+        .singlepart(SinglePart::plain(email_body))
+        .map_err(|e| e.to_string())?;
+
+    let creds = Credentials::new(smtp_username.clone(), smtp_password.clone());
+
+    let mailer = SmtpTransport::relay(&smtp_server)
+        .map_err(|e| e.to_string())?
+        .port(smtp_port.parse::<u16>().unwrap())
+        .credentials(creds)
+        .build();
+
+    mailer.send(&email).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/**
+ * Hasher un token avec Argon2
+ * @param token : le token à hasher
+ * @return le token hashé
+ */
+pub fn hash_token(token: &str) -> String {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    let token_hash = argon2.hash_password(token.as_bytes(), &salt).unwrap().to_string();
+    token_hash
 }
