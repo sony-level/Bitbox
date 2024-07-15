@@ -1,7 +1,7 @@
 use sha2::{Digest, Sha512};
 use jsonwebtoken::{encode, Header, EncodingKey, Validation, TokenData, DecodingKey, decode};
 use uuid::Uuid;
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use crate::models:: ClaimsType;
 use std::{env, str};
 use std::fmt::Write;
@@ -17,13 +17,17 @@ use qrcode::render::svg;
 use std::result::Result;
 //use svg::Document;
 use data_encoding::BASE64;
-use lettre::{Message, SmtpTransport, Transport};
+use lettre::{Message, SmtpTransport, Transport };
 use lettre::transport::smtp::authentication::Credentials;
 use rand::Rng;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
-use lettre::message::{header, SinglePart};
+use lettre::message::{header, Mailbox, SinglePart};
+use lettre::message::header::{ContentType, HeaderName, MessageId};
+use lettre::transport::smtp::client::{Tls, TlsParameters};
+use native_tls::{TlsConnector, Protocol};
+use domain::models::User;
 
 static GA_AUTH: OnceCell<GoogleAuthenticator> = OnceCell::new();
 
@@ -65,33 +69,34 @@ fn generate_user_secret(id: Uuid) -> String {
     * @param user_id : l'identifiant de l'utilisateur
     * @return le token d'authentification
     */
-pub fn generate_token(id: Uuid )-> String {
-    let expiration = Utc::now().timestamp() + 60 * 60 * 24; // 24 heures d'expiration
-    let void = ClaimsType {
-        sub: id,
+pub fn generate_token(user: &User, secret: &str) -> String {
+    let expiration = Utc::now()
+        .checked_add_signed(Duration::hours(24))
+        .expect("valid timestamp")
+        .timestamp();
+
+    let claims = ClaimsType {
+        sub: user.id,
         exp: expiration as usize,
+        email: user.email.clone(),
+        role: user.role.clone(),
     };
-    let user_secret = generate_user_secret(id);
-    let token = encode(
-        &Header::default(),
-        &void,
-        &EncodingKey::from_secret(user_secret.as_ref()), // TDO: changer le secret , le mettre dans un fichier de configuration ou une foinction pour generer un secret
-    )
-    .unwrap();
-    token
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref())).unwrap()
 }
+
 
 /**
     * verifier le token d'authentification
     * @param token : le token d'authentification
     * @return l'identifiant de l'utilisateur
  */
-pub fn validate_token(token: &str , id: Uuid) -> Result<TokenData<ClaimsType>, JwtError> {
-    let user_secret = generate_user_secret(id);
-    let decoding_key = DecodingKey::from_secret(user_secret.as_ref()); // Assurez-vous que ce secret correspond à celui utilisé pour générer les tokens
-    decode::<ClaimsType>(token, &decoding_key, &Validation::default())
+fn decode_token(token: &str, secret: &str) -> Result<TokenData<ClaimsType>, JwtError> {
+    decode::<ClaimsType>(
+        token,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &Validation::default()
+    )
 }
-
 
 fn go_auth() -> &'static GoogleAuthenticator { //
     GA_AUTH.get_or_init(|| {
@@ -203,6 +208,8 @@ pub fn send_reset_email(email: &str, reset_token: &str) -> Result<(), String> {
     Ok(())
 }
 
+
+
 pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
     dotenv::dotenv().ok();
 
@@ -212,25 +219,34 @@ pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
     let smtp_from_email = env::var("SMTP_FROM_EMAIL").map_err(|e| e.to_string())?;
     let smtp_port = env::var("SMTP_PORT").map_err(|e| e.to_string())?;
 
-    println!("SMTP Username: {}", smtp_username);
-    println!("SMTP Server: {}", smtp_server);
-    println!("SMTP Port: {}", smtp_port);
-    println!("SMTP From Email: {}", smtp_from_email);
+    let email_body = format!("Pour confirmer votre inscription, cliquez sur le lien suivant : https://localhost:3000/api/v1/confirm_registration?token={}", token);
+    let message_id = format!("<{}@{}>", Uuid::new_v4(), smtp_server);
+    //let message_id_header = lettre::message::header::MessageId::new(message_id);
 
-    let email_body = format!("Pour confirmer votre inscription, cliquez sur le lien suivant : https://localhost:3000/confirm_registration?token={}", token);
-    let email = Message::builder()
+    let  email = Message::builder()
         .from(smtp_from_email.parse().unwrap())
         .to(email.parse().unwrap())
         .subject("Confirmation d'inscription")
-        .header(header::ContentType::TEXT_PLAIN)
+        .header(ContentType::TEXT_PLAIN)
+        //.header(MessageId::new(message_id))
         .singlepart(SinglePart::plain(email_body))
         .map_err(|e| e.to_string())?;
 
     let creds = Credentials::new(smtp_username.clone(), smtp_password.clone());
 
+    let tls_connector = TlsConnector::builder()
+        .min_protocol_version(Some(Protocol::Tlsv12))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let tls_parameters = TlsParameters::builder(smtp_server.clone())
+        .build_native()
+        .map_err(|e| e.to_string())?;
+
     let mailer = SmtpTransport::relay(&smtp_server)
         .map_err(|e| e.to_string())?
-        .port(smtp_port.parse::<u16>().unwrap())
+        .port(smtp_port.parse().unwrap())
+        .tls(Tls::Required(tls_parameters))
         .credentials(creds)
         .build();
 
