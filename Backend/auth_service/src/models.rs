@@ -1,7 +1,6 @@
 extern crate common;
 extern crate domain;
 
-use chrono::NaiveDateTime;
 use diesel::{Insertable, Queryable};
 //use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -42,6 +41,8 @@ pub struct LoginRequest {
 pub struct ClaimsType {
     pub sub: Uuid,
     pub exp: usize,
+    pub email: String,
+    pub role: UserRole,
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize ,ToSchema)]
