@@ -1,14 +1,12 @@
 extern crate common;
 extern crate domain;
 
-use diesel::{Insertable, Queryable};
-//use diesel::prelude::*;
+use diesel::{ Queryable};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-
 use domain::models::UserRole;
-//use domain::schema::auth_tokens::user_id;
+
 
 /**
  * Représente un utilisateur
@@ -19,30 +17,43 @@ pub struct RegisterRequest {
     pub first_name: String,
     pub last_name: String,
     pub password: String,
-   // pub totp_secret: String,
-   // pub role: UserRole,
 }
 
+#[derive(Deserialize)]
+pub struct AuthConfig {
+    pub jwt_secret: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub exp: usize,
+    pub sub: Uuid,
+}
 /**
     * Représente une demande de connexion
     */
 #[derive(Deserialize, Serialize , ToSchema)]
 pub struct LoginRequest {
     pub email: String,
-    pub password:  Option<String>,
-    pub token: Option<String>
+    pub password:  String,
+
 }
 
-
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct LoginResponse {
+    token: String,
+}
 /**
     *
     */
 #[derive(Deserialize, Serialize)]
 pub struct ClaimsType {
+    pub iat: usize,
     pub sub: Uuid,
     pub exp: usize,
     pub email: String,
     pub role: UserRole,
+
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize ,ToSchema)]
