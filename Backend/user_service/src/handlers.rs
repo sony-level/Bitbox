@@ -51,7 +51,7 @@ pub fn hash_password(password: &str) -> String {
 #[post("/users", format = "application/json", data = "<new_user>")]
 pub fn create_user(new_user: Json<NewUser>, pool: &State<Pool>) -> Result<status::Custom<Json<User>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
-    
+
     let hashed_password = hash_password(&new_user.password_hash);
     let new_user = NewUser {
         password_hash: &hashed_password,
@@ -85,8 +85,8 @@ pub fn get_users(pool: &State<Pool>) -> Result<status::Custom<Json<Vec<UserDispl
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
     match users.load::<User>(&mut conn) {
         Ok(users_list) => { //
-            let display_users: Vec<UserDisplay> = users_list.into_iter().map(|user| user.into()).collect(); // convertir les utilisateurs  en JSON pour les afficher dans l'API
-            Ok(Custom(Status::Ok, Json(display_users))) // renvoyer la liste des utilisateurs sous forme de JSON
+            let display_users: Vec<UserDisplay> = users_list.into_iter().map(|user| user.into()).collect();
+            Ok(Custom(Status::Ok, Json(display_users)))
         },
         Err(err) => Err(Custom(
             Status::InternalServerError,
@@ -143,13 +143,6 @@ pub fn update_user(id: Uuid, user: Json<UpdateUser>, pool: &State<Pool>) -> Resu
             json!({ "error": err.to_string() })
         ))?;
     Ok(Custom(Status::Ok, Json(user)))
-}
-
-//
-
-#[get("/user")]
-pub fn index() -> &'static str {
-    "Hello, world!"
 }
 
 
