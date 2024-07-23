@@ -3,28 +3,25 @@ extern crate domain;
 
 
 
-use rocket::response::status::{Custom, NoContent};
+use rocket::response::status::{Custom};
 
-use crate::models::{ClaimsType, ForgotPasswordRequest, LogoutRequest, ResetPasswordRequest, TotpSetupResponse, Verify2FARequest};
-use domain::models::{User, NewUser, UserRole, NewAuthToken, AuthToken , Response, Error};
+use crate::models::{AuthConfig};
+use domain::models::{User, NewUser, UserRole, NewAuthToken, Response, Error, EmailConfirmation, NewEmailConfirmation, AuthToken};
 use domain::schema::*;
 use diesel::prelude::*;
-use rocket::http::Status;
+use rocket::http::{Cookie, CookieJar, Status};
 use common::db::Pool;
 use rocket::State;
-use crate::models::{AuthenticatedUser, RegisterRequest, LoginRequest };
-use crate::utils::{hash_password, generate_token, verify_password, generate_totp_secret, generate_totp_qr_code, validate_token, verify_totp_code, qr_to_svg_string, generate_reset_token, send_reset_email};
+use crate::models::{ RegisterRequest, LoginRequest};
+use crate::utils::{hash_password, generate_token, verify_password,  send_confirmation_email, generat_token, generate_jwt, decode_jwt};
 use chrono::Utc;
-use diesel::delete;
-use jsonwebtoken::{decode, DecodingKey, Validation};
-use qrcodegen::{QrCode};
-use rocket::response::status;
-use rocket::serde::json::{Json, json};
+use rocket::serde::json::{Json};
 use domain::schema::auth_tokens;
-use serde_json::Value;
-use base64::Engine;
-use diesel::insert_into;
+use rand::distributions::Alphanumeric;
+use rand::{Rng, thread_rng};
 use uuid::Uuid;
+use crate::guard::AuthenticatedUser;
+
 
 
 /**
@@ -36,91 +33,198 @@ use uuid::Uuid;
 * @see establish_connection
 * $ curl -X POST http://localhost:8000/api/v1/register -H "Content-Type: application/json" -d '{"email": "test", "password": "test", "first_name": "test", "last_name": "test"}
 */
-#[rocket::post("/register", format = "application/json", data = "<register_request>")]
-pub fn register(register_request: Json<RegisterRequest>, pool: &State<Pool>) -> Result<Json<AuthenticatedUser>, Status> {
-
+#[utoipa::path(
+    post,
+    path = "/auth/register",
+    tag = "Authentication",
+    request_body(content = RegisterRequest),
+    responses(
+        (status = 200, description = "Confirmation email sent", body = Response),
+        (status = 400, description = "Invalid input", body = Error),
+        (status = 500, description = "Internal server error", body = Error),
+        (status = 409, description = "User already exists", body = Error),
+        (status = 503, description = "Service unavailable", body = Error) ,
+    )
+)]
+#[post("/register", format = "application/json", data = "<register_request>")]
+pub fn register(register_request: Json<RegisterRequest>, pool: &State<Pool>,  config: &State<AuthConfig>) -> Result<Json<Response>, Custom<Json<Error>>> {
     if register_request.0.email.is_empty() || register_request.0.password.is_empty() || register_request.0.first_name.is_empty() || register_request.0.last_name.is_empty() {
-        return Err(Status::BadRequest);
+        return Err(Custom(Status::BadRequest, Json(Error { error: "Invalid input".to_string() })))
     }
-
-    let (totp_secret, totp_uri) = match generate_totp_secret(&register_request.0.email, Uuid::new_v4()) {
-        Ok(result) => result,
-        Err(_) => {
-            println!("Error generating TOTP secret");
-            return Err(Status::InternalServerError);
-        }
-    };
-
-    let totp_qr_code = match generate_totp_qr_code(&totp_uri) {
-        Ok(result) => result,
-        Err(_) => {
-            println!("Error generating TOTP QR code");
-            return Err(Status::InternalServerError);
-        }
-    };
     let mut conn = match pool.get() {
         Ok(connection) => connection,
         Err(_) => {
             println!("Error getting database connection");
-            return Err(Status::ServiceUnavailable);
+            return Err(Custom(Status::ServiceUnavailable, Json(Error { error: "Service unavailable".to_string() })));
         }
     };
+    let existing_user_count = users::table
+        .filter(users::email.eq(&register_request.0.email))
+        .count()
+        .get_result::<i64>(&mut conn)
+        .expect("Error counting users");
+    if existing_user_count > 0 {
+        return Err(Custom(Status::Conflict, Json(Error { error: "Un utilisateur existe déja avec cet Email".to_string() })));
+    }
+
+
+    let user_id = Uuid::new_v4();
+    let email_confirmation_token = generate_jwt(user_id, &config.jwt_secret, 30);
+
     let hashed_password = hash_password(&register_request.0.password);
 
-    let new_user = NewUser {
+    let new_email_confirmation = NewEmailConfirmation {
+        id: user_id,
         email: &register_request.0.email,
+        token: &email_confirmation_token,
         first_name: &register_request.0.first_name,
         last_name: &register_request.0.last_name,
-        totp_secret: &totp_secret,
         password_hash: &hashed_password,
-        role: UserRole::Student,
+        created_at: Some(Utc::now().naive_utc()),
+        expires_at : Utc::now().naive_utc() + chrono::Duration::minutes(30),
+    };
+
+    match diesel::insert_into(email_confirmations::table)
+        .values(&new_email_confirmation)
+        .execute(&mut conn) {
+        Ok(_) => println!("Email confirmation token inserted"),
+        Err(e) => {
+            println!("Error saving email confirmation token: {:?}", e);
+            return Err(Custom(Status::InternalServerError, Json(Error { error: "Internal server error".to_string() })));
+        }
+    }
+    match send_confirmation_email(&register_request.0.email, &email_confirmation_token) {
+        Ok(_) => println!("Confirmation email sent"),
+        Err(e) => {
+            println!("Error sending confirmation email: {:?}", e);
+            return Err(Custom(Status::InternalServerError, Json(Error { error: "Internal server error".to_string() })));
+        }
+    }
+
+    Ok(Json(Response { message: "User registered successfully, please check your email to confirm registration .".to_string() }))
+}
+
+/**
+* confirmer l'inscription
+* @param token : le token de confirmation
+* @param pool : la connexion à la base de données
+* @return statut de la confirmation
+* @throws Unauthorized si le token est invalide ou expiré
+* @throws InternalServerError si la connexion à la base de données ne fonctionne pas
+* @see establish_connection
+* $ curl -X GET http://localhost:8000/api/v1/confirm_registration?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkMzIwZjQzZi1mZjQwLTQwZjYtYjIwZi1mZjQwZjYtYjIwZi1mZjQwZjYtYjIwZiIsImV4cCI6MTYyNjQwNjYwMn0.1Z6Z9J
+*/
+#[utoipa::path(
+    get,
+    path = "/auth/confirm_registration",
+    tag = "Authentification",
+    responses(
+        (status = 200, description = "User confirmed", body = Response),
+        (status = 401, description = "Invalid or expired token", body = Error),
+        (status = 500, description = "Internal server error", body = Error),
+        (status = 503, description = "Service unavailable", body = Error) ,
+    )
+)]
+#[rocket::get("/confirm_registration?<token>")]
+pub fn token_confirm(token: String, pool: &State<Pool>, config: &State<AuthConfig> ) -> Result<Json<Response>, Custom<Json<Error>>> {
+    let mut conn = match pool.get() {
+        Ok(connection) => connection,
+        Err(_) => {
+            println!("Error getting database connection");
+            return Err(Custom(Status::ServiceUnavailable, Json(Error { error: "Service unavailable".to_string() })));
+        }
+    };
+
+    let claims = match decode_jwt(&token, &config.jwt_secret) {
+        Ok(data) => data.claims,
+        Err(_) => {
+            println!("Invalid or expired token");
+            return Err(Custom(Status::Unauthorized, Json(Error { error: "Invalid or expired token".to_string() })));
+        }
+    };
+
+    let email_confirmation = match email_confirmations::table
+        .filter(email_confirmations::token.eq(&token))
+        .select(EmailConfirmation::as_select())
+        .first::<EmailConfirmation>(&mut conn) {
+        Ok(ec) => ec,
+        Err(_) => {
+            println!("Invalid or expired token");
+            return Err(Custom(Status::Unauthorized, Json(Error { error: "Invalid or expired token".to_string() })));
+        }
+    };
+    if Utc::now().naive_utc() > email_confirmation.expires_at {
+        println!("Token has expired");
+        return Err(Custom(Status::Unauthorized, Json(Error { error: "Token has expired".to_string() })));
+    }
+
+    let email = email_confirmation.email.clone();
+    let first_name = email_confirmation.first_name.clone();
+    let last_name = email_confirmation.last_name.clone();
+    let password = email_confirmation.password_hash.clone();
+
+    diesel::delete(email_confirmations::table.filter(email_confirmations::id.eq(email_confirmation.id)))
+        .execute(&mut conn)
+        .expect("Error deleting email confirmation token");
+
+    let secret = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(64)
+        .map(char::from)
+        .collect::<String>();
+
+    let jwt_secret = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(64)
+        .map(char::from)
+        .collect::<String>();
+
+    let hashed_password = hash_password(&password);
+
+    let new_user = NewUser {
+        id :  claims.sub,
+        email: &email,
+        first_name: &first_name,
+        last_name: &last_name,
+        totp_secret: &secret,
+        password: &hashed_password,
+        jwt_secret: &jwt_secret,
+        role: UserRole::Trainer,
         created_at: Some(Utc::now().naive_utc()),
         updated_at: Some(Utc::now().naive_utc()),
     };
 
-    match diesel::insert_into(users::table)
+    let user_id = match diesel::insert_into(users::table)
         .values(&new_user)
-        .execute(&mut conn) {
-        Ok(_) => {
-            println!("New user created ");
-            let user = users::table
-                .filter(users::email.eq(&register_request.0.email))
-                .first::<User>(&mut conn)
-                .expect("Error finding user");
-
-            let user_id = user.id;
-            let token = generate_token(user.id);
-            let expires_at = Utc::now().naive_utc() + chrono::Duration::days(2); // 2 JOUR avent espiration
-
-            let new_auth_token = NewAuthToken {
-                id: Uuid::new_v4(),
-                user_id: Some(user_id),
-                token: &token,
-                created_at: Some(Utc::now().naive_utc()),
-                expires_at,
-            };
-            match diesel::insert_into(auth_tokens::table)
-                .values(&new_auth_token)
-                .execute(&mut conn) {
-                Ok(_) => println!("Auth token insert"),
-                Err(e) => {
-                    println!("Error saving auth token: {:?}", e);
-                    return Err(Status::InternalServerError);
-                }
-            }
-
-            Ok(Json(AuthenticatedUser {
-                id: user_id,
-                role: user.role,
-                token,
-                totp_qr_code: Some(totp_qr_code),
-            }))
-        },
+        .returning(users::id)
+        .get_result::<Uuid>(&mut conn) {
+        Ok(id) => id,
         Err(e) => {
             println!("Error saving new user: {:?}", e);
-            Err(Status::InternalServerError)
+            return Err(Custom(Status::InternalServerError, Json(Error { error: "Internal server error".to_string() })));
+        }
+    };
+
+    let auth_token = generate_token(&new_user);
+
+    let new_auth_token = NewAuthToken {
+        user_id: Some(user_id),
+        token: &auth_token,
+        created_at: Some(Utc::now().naive_utc()),
+        expires_at: Utc::now().naive_utc() + chrono::Duration::hours(24),
+    };
+
+    match diesel::insert_into(auth_tokens::table)
+        .values(&new_auth_token)
+        .execute(&mut conn) {
+        Ok(_) => println!("Auth token inserted"),
+        Err(e) => {
+            println!("Error saving auth token: {:?}", e);
+            return Err(Custom(Status::InternalServerError, Json(Error { error: "Internal server error".to_string() })));
         }
     }
+
+    Ok(Json(Response { message: "User confirmed.".to_string() }))
 }
 
 
@@ -131,71 +235,80 @@ pub fn register(register_request: Json<RegisterRequest>, pool: &State<Pool>) -> 
 * @return l'utilisateur connecté
 * @throws InternalServerError si la connexion à la base de données ne fonctionne pas
 * @see establish_connection
-* $ curl -X POST http://localhost:8000/api/v1/login -H "Content-Type: application/json" -d '{"email": "test", "password": "test"}'
+* $ curl -X POST http://localhost:8000/api/v1/login -H "Content-Type: application/json" -d '{"email": "test", "password": "test"}' , "Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
 */
-#[rocket::post("/login", format = "application/json", data = "<login_request>")]
-pub  fn login(login_request: Json<LoginRequest>, pool: &State<Pool>) -> Result<Json<Response>, Status> {
+#[utoipa::path(
+    post,
+    path = "/auth/login",
+    tag = "Authentification",
+    request_body(content = LoginRequest),
+    responses(
+        (status = 200, description = "Login successful", body = Response),
+        (status = 401, description = "Unauthorized"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+#[post("/login", format = "application/json", data = "<login_request>")]
+pub fn login(login_request: Json<LoginRequest>, pool: &State<Pool>, cookies: &CookieJar<'_>) -> Result<Json<Response>, Custom<Json<Error>>> {
+    let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, Json(Error { error: "Service Unavailable".to_string() })))?;
 
-    let mut conn = pool.get().map_err(|_| Status::ServiceUnavailable)?;
-
+    // Recherche de l'utilisateur par email
     let user = users::table
         .filter(users::email.eq(&login_request.email))
         .first::<User>(&mut conn)
-        .map_err(|_| Status::Unauthorized)?;
+        .map_err(|_| Custom(Status::Unauthorized, Json(Error { error: "Invalid credentials".to_string() })))?;
 
-    let valid_token = auth_tokens::table
+    // Vérification des anciens tokens
+    let auth_token_result = auth_tokens::table
         .filter(auth_tokens::user_id.eq(user.id))
-        .filter(auth_tokens::expires_at.gt(chrono::Utc::now().naive_utc()))
+        .filter(auth_tokens::expires_at.gt(Utc::now().naive_utc()))
         .first::<AuthToken>(&mut conn)
         .optional()
-        .map_err(|_| Status::InternalServerError)?;
+        .map_err(|_| Custom(Status::InternalServerError, Json(Error { error: "Internal server error".to_string() })))?;
 
-    if let Some(ref token) = login_request.token {
-        if let Some(valid_token) = valid_token {
-            if valid_token.token == *token {
-                return Ok(Json(Response {
-                    message: "Login successful".to_string(),
-                }));
-            }
-        }
-    }
+    if let Some(auth_token) = auth_token_result {
+        println!("Token valide trouvé pour l'utilisateur, connexion réussie.");
+        let mut cookie = Cookie::new("token", auth_token.token.clone());
+        cookie.set_http_only(true);
+        cookie.set_secure(true);
+        cookie.set_max_age(time::Duration::hours(24));
+        cookies.add_private(cookie);
 
-    if let Some(password) = &login_request.password {
-        if verify_password(password.to_string(), &user.password_hash) {
-            diesel::delete(auth_tokens::table
-                .filter(auth_tokens::user_id.eq(user.id)))
-                .execute(&mut conn)
-                .map_err(|_| Status::InternalServerError)?;
+        return Ok(Json(Response { message: "Login successful".to_string() }));
+    } else {
 
-            let token = generate_token(user.id);
-            let expires_at = chrono::Utc::now().naive_utc() + chrono::Duration::days(2); // 2 heure avant expiration
+        diesel::delete(auth_tokens::table.filter(auth_tokens::user_id.eq(user.id)))
+            .execute(&mut conn)
+            .map_err(|_| Custom(Status::InternalServerError, Json(Error { error: "Internal server error".to_string() })))?;
+
+        if verify_password(&login_request.password, &user.password) {
+            let token =  generat_token(&user);
             let new_auth_token = NewAuthToken {
-                id: Uuid::new_v4(),
                 user_id: Some(user.id),
                 token: &token,
-                created_at: Some(chrono::Utc::now().naive_utc()),
-                expires_at,
+                created_at: Some(Utc::now().naive_utc()),
+                expires_at: Utc::now().naive_utc() + chrono::Duration::hours(24),
             };
 
-            match diesel::insert_into(auth_tokens::table)
+            diesel::insert_into(auth_tokens::table)
                 .values(&new_auth_token)
-                .execute(&mut conn) {
-                Ok(_) => {
-                    println!("Auth token inserted into database");
-                },
-                Err(e) => {
-                    println!("Error saving auth token: {:?}", e);
-                    return Err(Status::InternalServerError);
-                }
-            }
+                .execute(&mut conn)
+                .map_err(|_| Custom(Status::InternalServerError, Json(Error { error: "Internal server error".to_string() })))?;
 
-            return Ok(Json(Response {
-                message: "Login successful".to_string(),
-            }));
+            let mut cookie = Cookie::new("token", token);
+            cookie.set_http_only(true);
+            cookie.set_secure(true);
+            cookie.set_max_age(time::Duration::hours(24));
+            cookies.add_private(cookie);
+
+            Ok(Json(Response { message: "Login successful".to_string() }))
+        } else {
+            println!("Mot de passe incorrect");
+            Err(Custom(Status::Unauthorized, Json(Error { error: "Invalid credentials".to_string() })))
         }
     }
-    Err(Status::Unauthorized)
 }
+
 
 
 /**
@@ -204,148 +317,53 @@ pub  fn login(login_request: Json<LoginRequest>, pool: &State<Pool>) -> Result<J
 * @return statut de la deconnexion
 * @throws InternalServerError si la connexion à la base de données ne fonctionne pas
 * @see establish_connection
-*$ curl -X POST http://localhost:8000/api/v1/logout -H "Content-Type: application/json" -d '{"id": "test"}'
+*$ curl -X GET http://localhost:8000/api/v1/logout -H "Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
 */
-#[post("/logout", format = "application/json", data = "<request>")]
-pub fn logout(request: Json<LogoutRequest>, pool: &State<Pool>) -> Result<Json<Response>, Status> {
-    let mut conn = pool.get().map_err(|_| Status::ServiceUnavailable)?;
+#[utoipa::path(
+    post,
+    path = "/auth/logout",
+    tag = "Authentication",
+    responses(
+        (status = 200, description = "User logged out"),
+    )
+)]
+#[post("/logout")]
+pub fn logout(cookies: &CookieJar<'_>, pool: &State<Pool>, user: AuthenticatedUser) -> Result<Json<Response>, Custom<Json<Error>>> {
+    let token_cookie = cookies.get_private("token");
 
-    let user_id_uuid = match Uuid::parse_str(&request.user_id) {
-        Ok(uuid) => uuid,
-        Err(_) => return Err(Status::BadRequest),
-    };
+    if let Some(token_cookie) = token_cookie {
+        let token_value = token_cookie.value().to_string();
+        let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, Json(Error { error: "Service Unavailable".to_string() })))?;
 
- match diesel::delete(auth_tokens::table
-        .filter(auth_tokens::user_id.eq(user_id_uuid)))
-        .execute(&mut conn) {
-        Ok(_) => Ok(Json(Response { message: "Logout successful".to_string() })),
-        Err(_) => Err(Status::InternalServerError),
+        diesel::delete(auth_tokens::table.filter(auth_tokens::token.eq(&token_value)))
+            .execute(&mut conn)
+            .map_err(|_| Custom(Status::InternalServerError, Json(Error { error: "Internal server error".to_string() })))?;
+
+        cookies.remove_private(Cookie::build("token"));
     }
+
+    Ok(Json(Response { message: "User logged out".to_string() }))
 }
 
-/**
-* Mot de passse oublié
-* @param forgot_password_request : la demande de mot de passse oublié
-* @param pool : la connexion à la base de données
-* @return statut de la demande
-* @throws InternalServerError si la connexion à la base de données ne fonctionne pas
-* @see establish_connection
-*$ curl -X POST http://localhost:8000/api/v1/forgot_password -H "Content-Type: application/json" -d '{"email": "test"}'
-
-*/
-#[post("/forgot_password", format = "application/json", data = "<request>")]
-pub fn forgot_password(request: Json<ForgotPasswordRequest>, pool: &State<Pool>) -> Result<status::NoContent, Custom<Value>> {
-    let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Service unavailable"})))?;
-
-    let user = users::table
-        .filter(users::email.eq(&request.email))
-        .first::<User>(&mut conn)
-        .map_err(|_| Custom(rocket::http::Status::NotFound, json!({"error": "Email not found"})))?;
-
-    let reset_token = generate_reset_token(user.id);
-
-    send_reset_email(&user.email, &reset_token)
-        .map_err(|e| Custom(rocket::http::Status::InternalServerError, json!({"error": e})))?;
-
-    Ok(status::NoContent)
-}
 
 /**
- * Vérifier le code TOTP
- * @param verify_2fa_request : la demande de vérification 2FA
- * @param pool : la connexion à la base de données
- * @return statut de la vérification
- * @throws Unauthorized si le code TOTP est invalide
- * @throws BadRequest si l'identifiant de l'utilisateur est manquant
- * @throws InternalServerError si la connexion à la base de données ne fonctionne pas
-* $ curl -X POST http://localhost:8000/api/v1/2fa/verify -H "Content-Type: application/json" -d '{"user_id": "d320f43f-ff40-40f6-b20f-ff40f6b20f6f", "totp_code": "123456"}'
+ * route protegee
+ * @param user : l'utilisateur connecté
+ * @return le message de bienvenue
+ * @throws Unauthorized si l'utilisateur n'est pas connecté
+ * @see AuthenticatedUser
+ * $ curl -X GET http://localhost:8000/api/v1/protected
  */
-#[rocket::post("/2fa/verify", format = "application/json", data = "<verify_2fa_request>")]
-pub async fn verify_2fa(verify_2fa_request: Json<Verify2FARequest>, pool: &State<Pool>) -> Result<Status, Status> {
-    let mut conn = pool.get().map_err(|_| Status::ServiceUnavailable)?;
-    if let Some(user_id) = verify_2fa_request.user_id {
-        let user = users::table
-            .filter(users::id.eq(user_id))
-            .first::<User>(&mut conn)
-            .map_err(|_| Status::Unauthorized)?;
-        if verify_totp_code(&user.totp_secret, &verify_2fa_request.totp_code) {
-            Ok(Status::Ok)
-        } else {
-            Err(Status::Unauthorized)
-        }
-    } else {
-        Err(Status::BadRequest)
-    }
-}
-
-/**
- * Setup TOTP
- * @param authenticated_user : l'utilisateur authentifier
- * @param pool : la connexion à la base de données
- * @return statut de la setup
- * @throws Unauthorized si l'utilisateur n'est pas authentifier
- * @throws InternalServerError si la connexion à la base de données ne fonctionne pas
- * @see establish_connection
- * $ curl -X GET http://localhost:8000/api/v1/2fa/setup
-*/
-#[post("/2FA/setup", format = "application/json", data = "<authenticated_user>")]
-pub fn totp_setup(authenticated_user: Json<AuthenticatedUser>, pool: &rocket::State<Pool>) -> Result<Json<TotpSetupResponse>, Status> {
-    let mut conn = pool.get().map_err(|_| Status::ServiceUnavailable)?;
-
-    let user = users::table
-        .find(authenticated_user.id)
-        .first::<User>(&mut conn)
-        .map_err(|_| rocket::http::Status::NotFound)?;
-
-    let email = &user.email;
-    let user_id = user.id;
-
-    let (totp_secret, uri) = generate_totp_secret(email, user_id)
-        .map_err(|_| rocket::http::Status::InternalServerError)?;
-
-    let qr_code_result = QrCode::encode_text(&uri, qrcodegen::QrCodeEcc::High)
-        .map_err(|_| rocket::http::Status::InternalServerError)?;
-
-    let qr_svg = qr_to_svg_string(&qr_code_result, 4);
-
-    let engine = base64::engine::general_purpose::STANDARD;
-    let qr_base64 = engine.encode(&qr_svg);
-
-    Ok(Json(TotpSetupResponse {
-        secret: totp_secret,
-        uri,
-        qr_code: qr_base64,
-    }))
-}
-
-
-/**
-* renitialiser le mot de passe
-* @param request : la demande de renitialisation du mot de passe
-* @param pool : la connexion à la base de données
-* @return statut de la renitialisation
-* @throws Unauthorized si le code TOTP est invalide
-* @throws InternalServerError si la connexion à la base de données ne fonctionne pas
-* $ curl -X POST http://localhost:8000/api/v1/reset_password -H "Content-Type: application/json" -d '{"user_id": "d320f43f-ff40-40f6-b20f-ff40f6b20f6f", "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkMzIwZjQzZi1mZjQwLTQwZjYtYjIwZi1mZjQwZjYtYjIwZi1mZjQwZjYtYjIwZiIsImV4cCI6MTYyNjQwNjYwMn0.1Z6Z9J", "new_password": "test"}'
-
-*/
-
-#[post("/reset_password", format = "application/json", data = "<request>")]
-pub fn reset_password(request: Json<ResetPasswordRequest>, pool: &State<Pool>) -> Result<NoContent, Status> {
-    let mut conn= pool.get().map_err(|_| Status::ServiceUnavailable)?;
-
-    let reset_token = generate_reset_token(request.user_id);
-
-    let token_data = decode::<ClaimsType>(&request.token,
-                                          &DecodingKey::from_secret(reset_token.as_ref()),
-                                          &Validation::default())
-        .map_err(|_| Status::Unauthorized)?;
-
-    let new_password_hash = hash_password(&request.new_password);
-
-    diesel::update(users::table.filter(users::id.eq(token_data.claims.sub)))
-        .set(users::password_hash.eq(new_password_hash))
-        .execute(&mut conn)
-        .map(|_| NoContent)
-        .map_err(|_| Status::InternalServerError)
+#[utoipa::path(
+    get,
+    path = "/protected",
+    tag = "Protected",
+    responses(
+        (status = 200, description = "Access granted"),
+        (status = 401, description = "Unauthorized"),
+    )
+)]
+#[get("/protected")]
+pub fn protected_route(user: AuthenticatedUser) -> String {
+    format!("Welcome, {}. Your role is {}.", user.email, user.role)
 }
