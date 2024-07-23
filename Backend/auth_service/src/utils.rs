@@ -1,30 +1,32 @@
-use sha2::{Digest, Sha512};
-use jsonwebtoken::{encode, Header, EncodingKey, Validation, TokenData, DecodingKey, decode};
-use uuid::Uuid;
-use chrono::{Duration, Utc};
-use crate::models::{Claims, ClaimsType};
 use std::{env, str};
 use std::fmt::Write;
+use std::result::Result;
+
+use argon2::{self , Config};
+
 use base64::Engine;
 use base64::engine::general_purpose;
-use qrcodegen::{QrCode as QrCodeGen, QrCodeEcc};
-use jsonwebtoken::errors::Error as JwtError;
+use chrono::{Duration, Utc};
 use google_authenticator::GoogleAuthenticator;
-use once_cell::sync::{ OnceCell};
-use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-use std::result::Result;
-use lettre::{Message, SmtpTransport, Transport };
+use jsonwebtoken::{decode, DecodingKey, encode, EncodingKey, Header, TokenData, Validation};
+use jsonwebtoken::errors::Error as JwtError;
+use lettre::{Message, SmtpTransport, Transport};
+use lettre::message::header::ContentType;
+use lettre::message::SinglePart;
 use lettre::transport::smtp::authentication::Credentials;
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use argon2::password_hash::rand_core::OsRng;
-use argon2::password_hash::SaltString;
-use lettre::message::{header, Mailbox, SinglePart};
-use lettre::message::header::{ContentType};
 use lettre::transport::smtp::client::{Tls, TlsParameters};
-use native_tls::{TlsConnector, Protocol};
+use native_tls::{Protocol, TlsConnector};
+use once_cell::sync::OnceCell;
+use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
+use qrcodegen::{QrCode as QrCodeGen, QrCodeEcc};
+use sha2::{Digest, Sha512};
+use uuid::Uuid;
+use rand::rngs::OsRng;
+use rand::Rng;
+
 use domain::models::{NewUser, User};
-use argon2::password_hash::Error as PasswordHashError;
-use config::Config;
+
+use crate::models::{Claims, ClaimsType};
 
 static GA_AUTH: OnceCell<GoogleAuthenticator> = OnceCell::new();
 
@@ -34,10 +36,9 @@ static GA_AUTH: OnceCell<GoogleAuthenticator> = OnceCell::new();
  * @return le mot de passe hashé
  */
 pub fn hash_password(password: &str) -> String {
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-    let password_hash = argon2.hash_password(password.as_bytes(), &salt).unwrap().to_string();
-    password_hash
+    let salt: [u8; 32] = OsRng.gen();
+    let config = Config::default();
+    argon2::hash_encoded(password.as_bytes(), &salt, &config).unwrap()
 }
 
 /**
@@ -47,24 +48,7 @@ pub fn hash_password(password: &str) -> String {
     * @return le mot de passe hashé
  */
 pub fn verify_password(password: &str, hash: &str) -> bool {
-    let parsed_hash = PasswordHash::new(hash).unwrap();
-    let argon2 = Argon2::default();
-    argon2.verify_password(password.as_bytes(), &parsed_hash).is_ok()
-
-}
-
-pub fn verif_password(password: &Option<String>, hash: &str) -> Result<bool, PasswordHashError> {
-    let argon2 = Argon2::default();
-    let parsed_hash = PasswordHash::new(hash)?;
-
-    if let Some(ref actual_password) = password {
-        match argon2.verify_password(actual_password.as_bytes(), &parsed_hash) {
-            Ok(_) => Ok(true),
-            Err(_) => Ok(false),
-        }
-    } else {
-        Err(PasswordHashError::Password)
-    }
+    argon2::verify_encoded(hash, password.as_bytes()).unwrap_or(false)
 }
 /**
  * Générer un secret utilisateur
@@ -270,14 +254,3 @@ pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
     Ok(())
 }
 
-/**
- * Hasher un token avec Argon2
- * @param token : le token à hasher
- * @return le token hashé
- */
-pub fn hash_token(token: &str) -> String {
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-    let token_hash = argon2.hash_password(token.as_bytes(), &salt).unwrap().to_string();
-    token_hash
-}
