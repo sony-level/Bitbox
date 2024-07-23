@@ -2,32 +2,28 @@ use sha2::{Digest, Sha512};
 use jsonwebtoken::{encode, Header, EncodingKey, Validation, TokenData, DecodingKey, decode};
 use uuid::Uuid;
 use chrono::{Duration, Utc};
-use crate::models:: ClaimsType;
+use crate::models::{Claims, ClaimsType};
 use std::{env, str};
 use std::fmt::Write;
 use base64::Engine;
 use base64::engine::general_purpose;
 use qrcodegen::{QrCode as QrCodeGen, QrCodeEcc};
-use qrcode::QrCode;
 use jsonwebtoken::errors::Error as JwtError;
 use google_authenticator::GoogleAuthenticator;
 use once_cell::sync::{ OnceCell};
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-use qrcode::render::svg;
 use std::result::Result;
-//use svg::Document;
-use data_encoding::BASE64;
 use lettre::{Message, SmtpTransport, Transport };
 use lettre::transport::smtp::authentication::Credentials;
-use rand::Rng;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
 use lettre::message::{header, Mailbox, SinglePart};
-use lettre::message::header::{ContentType, HeaderName, MessageId};
+use lettre::message::header::{ContentType};
 use lettre::transport::smtp::client::{Tls, TlsParameters};
 use native_tls::{TlsConnector, Protocol};
-use domain::models::User;
+use domain::models::{NewUser, User};
+use argon2::password_hash::Error as PasswordHashError;
 
 static GA_AUTH: OnceCell<GoogleAuthenticator> = OnceCell::new();
 
@@ -49,9 +45,18 @@ pub fn hash_password(password: &str) -> String {
     * @param hash : le mot de passe hashé
     * @return le mot de passe hashé
  */
-pub fn verify_password(password: String, hash: &str) -> bool {
-    let parsed_hash = PasswordHash::new(hash).unwrap();
-    Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok()
+pub fn verify_password(password: &Option<String>, hash: &str) -> Result<bool, PasswordHashError> {
+    let argon2 = Argon2::default();
+    let parsed_hash = PasswordHash::new(hash)?;
+
+    if let Some(ref actual_password) = password {
+        match argon2.verify_password(actual_password.as_bytes(), &parsed_hash) {
+            Ok(_) => Ok(true),
+            Err(_) => Ok(false),
+        }
+    } else {
+        Err(PasswordHashError::Password)
+    }
 }
 /**
  * Générer un secret utilisateur
@@ -64,38 +69,81 @@ fn generate_user_secret(id: Uuid) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+pub fn generate_jwt(user_id: Uuid, secret: &str, expiration_minutes: i64) -> String {
+    let expiration = Utc::now()
+        .checked_add_signed(Duration::minutes(expiration_minutes))
+        .expect("valid timestamp")
+        .timestamp();
+
+    let claims = Claims {
+        sub: user_id,
+        exp: expiration as usize,
+    };
+
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref())).unwrap()
+}
+
+pub fn decode_jwt(token: &str, secret: &str) -> Result<TokenData<Claims>, JwtError> {
+    decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &Validation::default(),
+    )
+}
+
 /**
     * Générer un token d'authentification
     * @param user_id : l'identifiant de l'utilisateur
     * @return le token d'authentification
     */
-pub fn generate_token(user: &User, secret: &str) -> String {
+pub fn generate_token(user: &NewUser) -> String {
     let expiration = Utc::now()
         .checked_add_signed(Duration::hours(24))
         .expect("valid timestamp")
         .timestamp();
-
     let claims = ClaimsType {
-        sub: user.id,
+        iat: Utc::now().timestamp() as usize,
+        sub: Some(user.id).unwrap(),
         exp: expiration as usize,
-        email: user.email.clone(),
+        email: user.email.parse().unwrap(),
         role: user.role.clone(),
     };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref())).unwrap()
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(user.jwt_secret.as_ref())).unwrap()
 }
 
+pub fn generat_token(user: &User) -> String {
+    let expiration = Utc::now()
+        .checked_add_signed(Duration::hours(24))
+        .expect("valid timestamp")
+        .timestamp();
+    let claims = ClaimsType {
+        iat: Utc::now().timestamp() as usize,
+        sub: Some(user.id).unwrap(),
+        exp: expiration as usize,
+        email: user.email.clone().parse().unwrap(),
+        role: user.role.clone(),
+    };
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(user.jwt_secret.as_ref())).unwrap()
+}
 
 /**
     * verifier le token d'authentification
     * @param token : le token d'authentification
     * @return l'identifiant de l'utilisateur
  */
-fn decode_token(token: &str, secret: &str) -> Result<TokenData<ClaimsType>, JwtError> {
+pub fn decode_token(token: &str, secret: &str) -> Result<TokenData<ClaimsType>, JwtError> {
     decode::<ClaimsType>(
         token,
         &DecodingKey::from_secret(secret.as_ref()),
         &Validation::default()
     )
+}
+
+pub fn decode_jwt_no_secret(token: &str) -> Result<ClaimsType, jsonwebtoken::errors::Error> {
+    let mut validation = jsonwebtoken::Validation::default();
+    validation.insecure_disable_signature_validation();
+    let token_data = jsonwebtoken::decode::<ClaimsType>(&token, &jsonwebtoken::DecodingKey::from_secret(b""), &validation)?;
+    Ok(token_data.claims)
 }
 
 fn go_auth() -> &'static GoogleAuthenticator { //
@@ -168,47 +216,6 @@ pub fn qr_to_svg_string(qr: &QrCodeGen, border: i32) -> String {
 pub fn verify_totp_code(secret: &str, code: &str) -> bool {
     go_auth().verify_code(secret, code, 3, 0)
 }
-
-
-pub fn generate_reset_token(user_id: Uuid) -> String {
-    let expiration = Utc::now().timestamp() + 3600 * 24; // Token expiré après 24 heures
-    let user_secret = generate_user_secret(user_id);
-    let claims = ClaimsType {
-        sub: user_id,
-        exp: expiration as usize,
-    };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(user_secret.as_ref())).unwrap()
-}
-
-pub fn send_reset_email(email: &str, reset_token: &str) -> Result<(), String> {
-    dotenv::dotenv().ok();
-
-    let smtp_username = env::var("SMTP_USERNAME").map_err(|e| e.to_string())?;
-    let smtp_password = env::var("SMTP_PASSWORD").map_err(|e| e.to_string())?;
-    let smtp_server = env::var("SMTP_SERVER").map_err(|e| e.to_string())?;
-    let smtp_from_email = env::var("SMTP_FROM_EMAIL").map_err(|e| e.to_string())?;
-
-    let email_body = format!("Pour réinitialiser votre mot de passe, cliquez sur le lien suivant : https://localhost:3000/reset_password?token={}", reset_token);
-    let email = Message::builder()
-        .from(smtp_from_email.parse().unwrap())
-        .to(email.parse().unwrap())
-        .subject("Demande de réinitialisation du mot de passe")
-        .body(email_body)
-        .map_err(|e| e.to_string())?;
-
-    let creds = Credentials::new(smtp_username, smtp_password);
-
-    let mailer = SmtpTransport::relay(&smtp_server)
-        .map_err(|e| e.to_string())?
-        .credentials(creds)
-        .build();
-
-    mailer.send(&email).map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-
 
 pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
     dotenv::dotenv().ok();
