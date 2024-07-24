@@ -1,9 +1,7 @@
 use std::{env, str};
 use std::fmt::Write;
 use std::result::Result;
-
 use argon2::{self , Config};
-
 use base64::Engine;
 use base64::engine::general_purpose;
 use chrono::{Duration, Utc};
@@ -219,7 +217,7 @@ pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
     let smtp_port = env::var("SMTP_PORT").map_err(|e| e.to_string())?;
 
     let email_body = format!("Pour confirmer votre inscription, cliquez sur le lien suivant : https://localhost:3000/api/v1/confirm_registration?token={}", token);
-    let message_id = format!("<{}@{}>", Uuid::new_v4(), smtp_server);
+    //let message_id = format!("<{}@{}>", Uuid::new_v4(), smtp_server);
     //let message_id_header = lettre::message::header::MessageId::new(message_id);
 
     let  email = Message::builder()
@@ -233,10 +231,10 @@ pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
 
     let creds = Credentials::new(smtp_username.clone(), smtp_password.clone());
 
-    let tls_connector = TlsConnector::builder()
-        .min_protocol_version(Some(Protocol::Tlsv12))
-        .build()
-        .map_err(|e| e.to_string())?;
+    //let tls_connector = TlsConnector::builder()
+        //.min_protocol_version(Some(Protocol::Tlsv12))
+        //.build()
+        //.map_err(|e| e.to_string())?;
 
     let tls_parameters = TlsParameters::builder(smtp_server.clone())
         .build_native()
