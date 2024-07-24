@@ -135,6 +135,7 @@ pub fn token_confirm(token: String, pool: &State<Pool>, config: &State<AuthConfi
         }
     };
 
+
     let claims = match decode_jwt(&token, &config.jwt_secret) {
         Ok(data) => data.claims,
         Err(_) => {
