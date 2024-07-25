@@ -1,0 +1,27 @@
+[package]
+name = "domain"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+utoipa = { version = "4.2.0", features = ["chrono", "actix_extras", "debug", "serde_yaml", "time", "uuid", "yaml", "openapi_extensions", "decimal"] }
+chrono = { version = "0.4.38", features = ["serde"] }
+diesel = { version = "2.2.1", features = ["postgres" ,  "r2d2" ,"chrono" , "uuid" , "serde_json" ] }
+dotenv = "0.15.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_derive = "1.0"
+serde_json = { version = "1.0", features = ["raw_value"] }
+uuid = { version = "1.9.1", features = ["serde", "v4"] }
+uuid-b64 = "0.2.0"
+env_logger = "0.11.3"
+log = "0.4.20"
+r2d2 = "0.8.10"
+diesel_migrations = { version = "2.1.0", features = ["postgres"] }
+diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
+schemars = "1.0.0-alpha.2"
+schemars_derive = "0.8"
+destructure_traitobject = "0.3.0"
+
+
+[lib]
+path = "src/main.rs"
