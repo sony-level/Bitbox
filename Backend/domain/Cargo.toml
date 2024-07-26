@@ -24,4 +24,4 @@ destructure_traitobject = "0.3.0"
 
 
 [lib]
-path = "src/main.rs"
+path = "src/lib.rs"
