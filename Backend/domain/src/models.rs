@@ -40,6 +40,15 @@ pub enum UserRole {
     Student,  // Étudiant
 }
 
+impl From<String> for UserRole {
+    fn from(role: String) -> Self {
+        match role.as_str() {
+            "Student" => UserRole::Student,
+            "Trainer" => UserRole::Trainer,
+            _ => UserRole::Trainer,
+        }
+    }
+}
 impl fmt::Display for UserRole {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -48,6 +57,7 @@ impl fmt::Display for UserRole {
         }
     }
 }
+
 /*
 impl FromSql<Text, Pg> for UserRole {
     fn from_sql(bytes: Option<&<Pg as Backend>::RawValue<'_>>) -> deserialize::Result<Self> {
@@ -66,6 +76,7 @@ impl FromSql<Text, Pg> for UserRole {
     }
 }
 */
+
 #[derive(Serialize , Deserialize )]
 pub struct Response {
     pub message: String,
@@ -254,7 +265,6 @@ pub struct User {
     pub email: String,
     pub first_name: String,
     pub last_name: String,
-    pub totp_secret: Option<String>,
     pub password: String,
     pub jwt_secret: String,
     pub role: UserRole,
@@ -273,7 +283,6 @@ pub struct NewUser<'a> {
     pub email: &'a str,
     pub first_name: &'a str,
     pub last_name: &'a str,
-    pub totp_secret: &'a str,
     pub password: &'a str,
     pub jwt_secret: &'a str,
     pub role: UserRole,
