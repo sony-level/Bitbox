@@ -1,22 +1,16 @@
 extern crate diesel;
 extern crate dotenv;
 
-use std::env;
 use chrono::Utc;
-use rocket::State;
 use diesel::prelude::*;
-use domain::models::{User, UserRole};
+use domain::models::{ UserRole};
 use rocket::outcome::Outcome;
 use rocket::http::{ Status};
 use rocket::request::{self, FromRequest, Request};
 use uuid::Uuid;
 use domain::schema::{auth_tokens, users};
-use rocket_sync_db_pools::Error;
 use common::db::Pool;
-use crate::models::AuthConfig;
-use crate::utils::{decode_jwt, decode_jwt_no_secret, decode_token};
-
-
+use crate::utils::{decode_jwt_no_secret, decode_token};
 
 pub struct AuthenticatedUser {
     pub id: Uuid,
@@ -74,3 +68,7 @@ impl<'r> FromRequest<'r> for AuthenticatedUser {
         }
     }
 }
+
+
+
+
