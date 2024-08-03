@@ -1,32 +1,28 @@
 use std::{env, str};
+use std::error::Error;
 use std::fmt::Write;
 use std::result::Result;
 use argon2::{self , Config};
 use base64::Engine;
-use base64::engine::general_purpose;
+use bcrypt::{hash, verify};
 use chrono::{Duration, Utc};
-use google_authenticator::GoogleAuthenticator;
+use diesel::row::NamedRow;
 use jsonwebtoken::{decode, DecodingKey, encode, EncodingKey, Header, TokenData, Validation};
-use jsonwebtoken::errors::Error as JwtError;
+use jsonwebtoken::errors::{Error as JwtError, ErrorKind};
 use lettre::{Message, SmtpTransport, Transport};
 use lettre::message::header::ContentType;
 use lettre::message::SinglePart;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::transport::smtp::client::{Tls, TlsParameters};
-use native_tls::{Protocol, TlsConnector};
-use once_cell::sync::OnceCell;
-use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-use qrcodegen::{QrCode as QrCodeGen, QrCodeEcc};
 use sha2::{Digest, Sha512};
 use uuid::Uuid;
 use rand::rngs::OsRng;
-use rand::Rng;
-
+use rand::{Rng, RngCore};
 use domain::models::{NewUser, User};
+use reqwest::Client;
+use rocket::yansi::Paint;
+use crate::models::{Claims, ClaimsType, Jwk, Jwks};
 
-use crate::models::{Claims, ClaimsType};
-
-static GA_AUTH: OnceCell<GoogleAuthenticator> = OnceCell::new();
 
 /**
  * Hasher un mot de passe
@@ -34,31 +30,21 @@ static GA_AUTH: OnceCell<GoogleAuthenticator> = OnceCell::new();
  * @return le mot de passe hashé
  */
 pub fn hash_password(password: &str) -> String {
-    let salt: [u8; 32] = OsRng.gen();
+    let mut salt = [0u8; 32];
+    OsRng.try_fill_bytes(&mut salt).expect("Failed to generate salt");
     let config = Config::default();
     argon2::hash_encoded(password.as_bytes(), &salt, &config).unwrap()
 }
-
 /**
  * Verifier un mot de passe
     * @param password : le mot de passe à vérifier
     * @param hash : le mot de passe hashé
     * @return le mot de passe hashé
  */
-pub fn verify_password(password: &str, hash: &str) -> bool {
-    argon2::verify_encoded(hash, password.as_bytes()).unwrap_or(false)
+pub fn verify_password(password: &str, hashed_password: &str) -> Result<bool, Box<dyn Error>> {
+    let is_valid = argon2::verify_encoded(hashed_password, password.as_bytes())?;
+    Ok(is_valid)
 }
-/**
- * Générer un secret utilisateur
- * @param user_id : l'identifiant de l'utilisateur
- * @return le secret utilisateur
- */
-fn generate_user_secret(id: Uuid) -> String {
-    let mut hasher = Sha512::new();
-    hasher.update(id.to_string().as_bytes());
-    format!("{:x}", hasher.finalize())
-}
-
 pub fn generate_jwt(user_id: Uuid, secret: &str, expiration_minutes: i64) -> String {
     let expiration = Utc::now()
         .checked_add_signed(Duration::minutes(expiration_minutes))
@@ -136,76 +122,6 @@ pub fn decode_jwt_no_secret(token: &str) -> Result<ClaimsType, jsonwebtoken::err
     Ok(token_data.claims)
 }
 
-fn go_auth() -> &'static GoogleAuthenticator { //
-    GA_AUTH.get_or_init(|| {
-        GoogleAuthenticator::new()
-    })
-}
-
-/**
-    * Générer un code OTP
-    * @param user_id : l'identifiant de l'utilisateur
-    * @return le code OTP
-    */
-pub fn generate_totp_secret(email: &str, id: Uuid) -> Result<(String, String ), String> {
-    let sec = generate_user_secret(id);
-    let secret = go_auth().create_secret(32);
-    let account_name = utf8_percent_encode(email, NON_ALPHANUMERIC).to_string();
-    let issuer_name = utf8_percent_encode(sec.as_str(), NON_ALPHANUMERIC).to_string(); // TDO: changer le nom de l'émetteur
-    let uri = format!("otpauth://totp/{}?secret={}&issuer={}", account_name, secret, issuer_name);
-
-    Ok((secret, uri))
-}
-
-/**
- * Générer un QR code pour le 2FA
- * @param uri : l'URI TOTP
- * @return l'image du QR code en base64
- */
-pub fn generate_totp_qr_code(uri: &str) -> Result<String, String> {
-    let qr = QrCodeGen::encode_text(uri, QrCodeEcc::High).map_err(|e| e.to_string())?;
-    let svg = qr_to_svg_string(&qr, 4);
-    let encoded = general_purpose::STANDARD.encode(svg);
-    let result = format!("data:image/svg+xml;base64,{}", encoded);
-    Ok(result)
-}
-
-/**
- * Convertir un QR code en une chaîne SVG
- * @param qr : le QR code à convertir
- * @param border : la taille de la bordure
- * @return la chaîne SVG
- */
-pub fn qr_to_svg_string(qr: &QrCodeGen, border: i32) -> String {
-    let mut result = String::new();
-    write!(result, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n").unwrap();
-    write!(result, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 {} {}\">\n",
-           qr.size() + border * 2, qr.size() + border * 2).unwrap();
-    write!(result, "<rect width=\"100%\" height=\"100%\" fill=\"#FFFFFF\"/>\n").unwrap();
-    write!(result, "<path d=\"").unwrap();
-    for y in 0..qr.size() {
-        for x in 0..qr.size() {
-            if qr.get_module(x, y) {
-                if x != 0 || y != 0 {
-                    write!(result, " ").unwrap();
-                }
-                write!(result, "M{},{}h1v1h-1z", x + border, y + border).unwrap();
-            }
-        }
-    }
-    write!(result, "\" fill=\"#000000\"/>\n").unwrap();
-    write!(result, "</svg>\n").unwrap();
-    result
-}
-/**
-    * Vérifier un code OTP
-    * @param secret : le secret
-    * @param code : le code à vérifier
-    * @return true si le code est valide, false sinon
-    */
-pub fn verify_totp_code(secret: &str, code: &str) -> bool {
-    go_auth().verify_code(secret, code, 3, 0)
-}
 
 pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
     dotenv::dotenv().ok();
@@ -216,7 +132,7 @@ pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
     let smtp_from_email = env::var("SMTP_FROM_EMAIL").map_err(|e| e.to_string())?;
     let smtp_port = env::var("SMTP_PORT").map_err(|e| e.to_string())?;
 
-    let email_body = format!("Pour confirmer votre inscription, cliquez sur le lien suivant : https://localhost:3000/api/v1/confirm_registration?token={}", token);
+    let email_body = format!("Pour confirmer votre inscription, cliquez sur le lien suivant : https://localhost:8000/auth/confirm_registration?token={}", token);
     //let message_id = format!("<{}@{}>", Uuid::new_v4(), smtp_server);
     //let message_id_header = lettre::message::header::MessageId::new(message_id);
 
@@ -231,11 +147,6 @@ pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
 
     let creds = Credentials::new(smtp_username.clone(), smtp_password.clone());
 
-    //let tls_connector = TlsConnector::builder()
-        //.min_protocol_version(Some(Protocol::Tlsv12))
-        //.build()
-        //.map_err(|e| e.to_string())?;
-
     let tls_parameters = TlsParameters::builder(smtp_server.clone())
         .build_native()
         .map_err(|e| e.to_string())?;
@@ -248,7 +159,74 @@ pub fn send_confirmation_email(email: &str, token: &str) -> Result<(), String> {
         .build();
 
     mailer.send(&email).map_err(|e| e.to_string())?;
-
     Ok(())
 }
 
+
+pub async fn fetch_jwks(jwks_url: &str) -> Result<Jwks, reqwest::Error> {
+    let client = Client::new();
+    let res = client.get(jwks_url).send().await?;
+    let jwks = res.json::<Jwks>().await?;
+    Ok(jwks)
+}
+
+
+pub fn find_jwk<'a>(jwks: &'a Jwks, kid: &str) -> Option<&'a Jwk> {
+    jwks.keys.iter().find(|key| key.kid == kid)
+}
+
+
+pub fn decod_jwt(token: &str, jwks: &Jwks) -> Result<TokenData<ClaimsType>, JwtError> {
+    let header = jsonwebtoken::decode_header(token).unwrap();
+    let kid = match header.kid {
+        Some(k) => k,
+        None => return Err(JwtError::from(ErrorKind::InvalidToken))
+    };
+
+    let jwk = find_jwk(jwks, &kid).ok_or(JwtError::from(ErrorKind::InvalidToken))?;
+
+    let x5c = &jwk.x5c[0];
+    let der = base64::engine::general_purpose::STANDARD.decode(&x5c).map_err(|_| JwtError::from(ErrorKind::InvalidToken))?;
+    let pem = format!(
+        "-----BEGIN CERTIFICATE-----\n{:?}\n-----END CERTIFICATE-----",
+        base64::engine::general_purpose::STANDARD.encode(&der)
+    );
+    let decoding_key = DecodingKey::from_rsa_pem(pem.as_bytes()).unwrap();
+    decode::<ClaimsType>(token, &decoding_key, &Validation::new(jsonwebtoken::Algorithm::RS256))
+}
+
+pub fn is_password_strong(password: &str) -> bool {
+    if password.len() < 8 {
+        return false;
+    }
+    let has_uppercase = password.chars().any(|c| c.is_uppercase());
+    let has_lowercase = password.chars().any(|c| c.is_lowercase());
+    let has_digit = password.chars().any(|c| c.is_digit(10));
+    let has_special = password.chars().any(|c| !c.is_alphanumeric());
+    has_uppercase && has_lowercase && has_digit && has_special
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hash_password() {
+        let password = "mysecretpassword";
+        let hashed = hash_password(password);
+        assert!(!hashed.is_empty(), "Hashed password should not be empty");
+    }
+
+    #[test]
+    fn test_verify_password() {
+        let password = "mysecretpassword";
+        let hashed = hash_password(password);
+        let is_valid = verify_password(password, &hashed);
+        assert!(is_valid, "Password verification should succeed");
+
+        let wrong_password = "wrongpassword";
+        let is_valid = verify_password(wrong_password, &hashed);
+        assert!(!is_valid, "Password verification should fail for wrong password");
+    }
+}
