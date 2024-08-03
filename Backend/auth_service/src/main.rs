@@ -6,15 +6,9 @@ mod utils;
 mod models;
 mod guard;
 use std::env;
-use rocket::fairing::AdHoc;
-use crate::models::{AuthConfig, Jwks};
+use crate::models::{AuthConfig};
 use rocket::{Build, Rocket};
 use crate::models::{ LoginRequest, LoginResponse, RegisterRequest};
-
-
-
-
-
 use utoipa::OpenApi;
 use crate::utils::fetch_jwks;
 
@@ -52,11 +46,11 @@ struct ApiDoc;
  async fn rocket() -> Rocket<Build> {
     dotenv::dotenv().ok();
     let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-    let jwt_audience = env::var("JWT_AUDIENCE").expect("JWT_AUDIENCE must be set");
-    let jwt_issuer = env::var("JWT_ISSUER").expect("JWT_ISSUER must be set");
+    let _jwt_audience = env::var("JWT_AUDIENCE").expect("JWT_AUDIENCE must be set");
+    let _jwt_issuer = env::var("JWT_ISSUER").expect("JWT_ISSUER must be set");
     let jwks_url = env::var("JWKS_URL").expect("JWKS_URL must be set");
 
-    let jwks = fetch_jwks(&jwks_url).await.expect("Failed to fetch JWKS");
+    let _jwks = fetch_jwks(&jwks_url).await.expect("Failed to fetch JWKS");
 
     let pool = common::db::establish_connection();
     rocket::build()
@@ -74,7 +68,7 @@ struct ApiDoc;
                 handlers::create_student,
             ],
         )
-     
+
 
 
 }
