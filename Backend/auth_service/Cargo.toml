@@ -44,6 +44,8 @@ native-tls = "0.2.12"
 chrono-tz = "0.9.0"
 time = "0.3.36"
 config = "0.14.0"
+reqwest = { version = "0.12.5", features = ["json"] }
+regex = "1.10.5"
 
 
 [dependencies.rocket]
