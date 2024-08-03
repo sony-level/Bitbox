@@ -163,8 +163,6 @@ diesel::table! {
         #[max_length = 100]
         last_name -> Varchar,
         #[max_length = 255]
-        totp_secret -> Nullable<Varchar>,
-        #[max_length = 255]
         password -> Varchar,
         #[max_length = 255]
         jwt_secret -> Varchar,
