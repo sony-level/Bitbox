@@ -22,25 +22,6 @@ use rocket::{
 use domain::models::{User, NewUser , UserDisplay , UpdateUser };
 
 
-
-
-/**
- * Hasherle mdp
- * @param password : le mot de passe à hasher
- * @return le mot de passe hashé
- */
-pub fn hash_password(password: &str) -> String {
-    let mut hasher = Sha512::new();
-    hasher.update(password.as_bytes());
-    let hash_result = hasher.finalize();
-    let hex_string = hash_result.iter()
-        .map(|byte| format!("{:056x}", byte))
-        .collect::<Vec<String>>()
-        .join("");
-    hex_string
-}
-
-
 /**
  * Récupérer tous les utilisateurs
  * @param pool : la connexion à la base de données
@@ -54,7 +35,7 @@ pub fn hash_password(password: &str) -> String {
 pub fn get_users(pool: &State<Pool>) -> Result<status::Custom<Json<Vec<UserDisplay>>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
     match users.load::<User>(&mut conn) {
-        Ok(users_list) => { //
+        Ok(users_list) => {
             let display_users: Vec<UserDisplay> = users_list.into_iter().map(|user| user.into()).collect();
             Ok(Custom(Status::Ok, Json(display_users)))
         },
@@ -100,7 +81,6 @@ pub fn get_users_by_id(id: Uuid, pool: &State<Pool>) -> Result<status::Custom<Js
  * @see establish_connection
  * @see users
  */
-
 #[put("/users/<id>", format = "application/json", data = "<user>")]
 pub fn update_user(id: Uuid, user: Json<UpdateUser>, pool: &State<Pool>) -> Result<status::Custom<Json<User>>, status::Custom<JsonValue>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, json!({"error": "Database connection error"})))?;
