@@ -1,12 +1,10 @@
 use std::{env, str};
 use std::error::Error;
-use std::fmt::Write;
 use std::result::Result;
 use argon2::{self , Config};
 use base64::Engine;
-use bcrypt::{hash, verify};
+//use bcrypt::{hash, verify};
 use chrono::{Duration, Utc};
-use diesel::row::NamedRow;
 use jsonwebtoken::{decode, DecodingKey, encode, EncodingKey, Header, TokenData, Validation};
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind};
 use lettre::{Message, SmtpTransport, Transport};
@@ -14,13 +12,11 @@ use lettre::message::header::ContentType;
 use lettre::message::SinglePart;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::transport::smtp::client::{Tls, TlsParameters};
-use sha2::{Digest, Sha512};
 use uuid::Uuid;
 use rand::rngs::OsRng;
-use rand::{Rng, RngCore};
+use rand::{ RngCore};
 use domain::models::{NewUser, User};
 use reqwest::Client;
-use rocket::yansi::Paint;
 use crate::models::{Claims, ClaimsType, Jwk, Jwks};
 
 
