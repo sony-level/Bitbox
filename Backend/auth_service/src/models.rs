@@ -43,9 +43,7 @@ pub struct LoginRequest {
 pub struct LoginResponse {
     token: String,
 }
-/**
-    *
-    */
+
 #[derive(Deserialize, Serialize)]
 pub struct ClaimsType {
     pub iat: usize,
@@ -53,7 +51,6 @@ pub struct ClaimsType {
     pub exp: usize,
     pub email: String,
     pub role: UserRole,
-
 }
 
 #[derive(Queryable, Debug, Serialize, Deserialize ,ToSchema)]
@@ -98,4 +95,25 @@ pub struct ResetPasswordRequest {
     pub token: String,
     pub new_password: String,
     pub user_id: Uuid,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CreateStudentRequest {
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Jwk {
+    pub kty: String,
+    pub r#use: String,
+    pub kid: String,
+    pub x5c: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Jwks {
+    pub keys: Vec<Jwk>,
+
 }
