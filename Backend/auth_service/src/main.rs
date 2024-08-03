@@ -7,16 +7,16 @@ mod models;
 mod guard;
 use std::env;
 use rocket::fairing::AdHoc;
-use crate::models::AuthConfig;
+use crate::models::{AuthConfig, Jwks};
 use rocket::{Build, Rocket};
 use crate::models::{ LoginRequest, LoginResponse, RegisterRequest};
-use domain::models::{Error, Response};
+
 
 
 
 
 use utoipa::OpenApi;
-
+use crate::utils::fetch_jwks;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -49,26 +49,32 @@ struct ApiDoc;
 * @see establish_connection
 */
 #[launch]
-fn rocket() -> Rocket<Build> {
+ async fn rocket() -> Rocket<Build> {
     dotenv::dotenv().ok();
     let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let jwt_audience = env::var("JWT_AUDIENCE").expect("JWT_AUDIENCE must be set");
+    let jwt_issuer = env::var("JWT_ISSUER").expect("JWT_ISSUER must be set");
+    let jwks_url = env::var("JWKS_URL").expect("JWKS_URL must be set");
+
+    let jwks = fetch_jwks(&jwks_url).await.expect("Failed to fetch JWKS");
+
     let pool = common::db::establish_connection();
     rocket::build()
         .manage(pool)
-        .manage(AuthConfig { jwt_secret })
+        .manage(AuthConfig {jwt_secret})
+        //.manage(AuthConfi::new(jwks))
         .mount(
-            "/api/v1",
+            "/auth",
             routes![
                 handlers::register,
                 handlers::token_confirm,
                 handlers::login,
                 handlers::logout,
                 handlers::protected_route,
+                handlers::create_student,
             ],
         )
-        .attach(AdHoc::try_on_ignite("OpenApi", |rocket| async {
-            Ok(rocket.manage(ApiDoc::openapi()))
-        }))
+     
 
 
 }
