@@ -5,7 +5,7 @@ authors = ["Level sony <contact@level.ovh"]
 edition = "2021"
 
 [dependencies]
-utoipa = { version = "4.2.0", features = ["chrono", "actix_extras", "debug", "serde_yaml", "time", "uuid", "yaml", "openapi_extensions", "decimal"] }
+utoipa = { version = "4.2.3", features = ["chrono", "rocket_extras", "debug", "serde_yaml", "time", "uuid", "yaml", "openapi_extensions", "decimal"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 diesel = { version = "2.2.1", features = ["postgres" ,  "r2d2" ,"chrono" , "uuid" , "serde_json" ] }
 dotenv = "0.15.0"
