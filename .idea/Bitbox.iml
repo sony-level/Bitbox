@@ -6,10 +6,12 @@
       <sourceFolder url="file://$MODULE_DIR$/Backend/common/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Backend/domain/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Backend/user_service/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Backend/class_and_group_service/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/Backend/auth_service/target" />
       <excludeFolder url="file://$MODULE_DIR$/Backend/common/target" />
       <excludeFolder url="file://$MODULE_DIR$/Backend/domain/target" />
       <excludeFolder url="file://$MODULE_DIR$/Backend/user_service/target" />
+      <excludeFolder url="file://$MODULE_DIR$/Backend/class_and_group_service/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
