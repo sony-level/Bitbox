@@ -1,4 +1,5 @@
 use rocket::Route;
+use rocket::routes;
 
 /**
  * Récupérer les routes de l'API
@@ -17,6 +18,7 @@ pub fn routes() -> Vec<Route> {
         crate::handlers::get_users,
         crate::handlers::get_users_by_id,
         crate::handlers::update_user,
-        crate::handlers::delete_user
+        crate::handlers::delete_user,
+        crate::handlers::health_checker_handler
     ]
 }
