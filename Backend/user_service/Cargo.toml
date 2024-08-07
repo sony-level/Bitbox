@@ -1,7 +1,7 @@
 [package]
 name = "user_service"
 version = "0.1.0"
-authors = ["sony-level "]
+authors = ["Level sony <contact@level.ovh"]
 edition = "2021"
 
 [dependencies]
@@ -18,8 +18,10 @@ auth_service = { path = "../auth_service" }
 bcrypt = "0.15.1"
 sha2 = "0.11.0-pre.3"
 schemars = "1.0.0-alpha.2"
-utoipa = "5.0.0-alpha.0"
 destructure_traitobject = "0.3.0"
+utoipa-swagger-ui = { version = "7.1.0", features = ["rocket" , "debug"] }
+utoipa = { version = "4.2.3", features = ["chrono", "rocket_extras", "debug", "serde_yaml", "time", "uuid", "yaml", "openapi_extensions", "decimal"] }
+
 [dependencies.rocket]
 version = "0.5.0-rc.1"
 features = ["json" , "uuid" ]
@@ -27,3 +29,13 @@ features = ["json" , "uuid" ]
 [dependencies.rocket_okapi]
 version = "0.8.0"
 features = ["rapidoc" ]
+
+[[bin]]
+name = "user_service"
+path = "src/main.rs"
+
+[lib]
+name = "user_service"
+path = "src/lib.rs"
+
+
