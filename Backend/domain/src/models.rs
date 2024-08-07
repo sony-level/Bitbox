@@ -27,6 +27,13 @@ use schemars::{JsonSchema , gen::SchemaGenerator , Schema};
 use std::io::Read;
 use crate::schema::users::jwt_secret;
 
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct LogResponse {
+    pub status: &'static str,
+   pub  message: String,
+}
+
 /**
  * UserRole enum
  * enumération des rôles des utilisateurs
@@ -77,12 +84,12 @@ impl FromSql<Text, Pg> for UserRole {
 }
 */
 
-#[derive(Serialize , Deserialize )]
+#[derive(Serialize , Deserialize , ToSchema )]
 pub struct Response {
     pub message: String,
 }
 
-#[derive(Serialize , Deserialize )]
+#[derive(Serialize , Deserialize  , ToSchema)]
 pub struct Error {
     pub error: String,
 }
@@ -292,16 +299,13 @@ pub struct NewUser<'a> {
 
 }
 
-#[derive(Queryable ,AsChangeset, Deserialize , Serialize )]
+#[derive(Queryable ,AsChangeset, Deserialize , Serialize , ToSchema)]
 #[diesel(table_name = users)]
 pub struct UpdateUser {
     pub email: Option<String>,
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
-    pub password: Option<String>,
-    pub role: Option<UserRole>,
-    pub updated_at: Option<NaiveDateTime>,
 }
+
+
 
 /**
  * UserDisplay model
@@ -310,7 +314,7 @@ pub struct UpdateUser {
  * pour l'affichage
  */
 
-#[derive(Queryable, Debug, Identifiable, Deserialize, Serialize )]
+#[derive(Queryable, Debug, Identifiable, Deserialize, Serialize , ToSchema)]
 #[diesel(table_name = users)]
 #[diesel(primary_key(id))]
 pub struct UserDisplay {
