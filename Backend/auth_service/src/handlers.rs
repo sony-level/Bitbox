@@ -3,6 +3,8 @@ extern crate domain;
 
 
 
+use rocket::get;
+use rocket::post;
 use crate::utils::{decode_token, is_password_strong};
 use rocket::response::status::{Custom};
 
@@ -240,7 +242,7 @@ pub fn token_confirm(token: String, pool: &State<Pool>, config: &State<AuthConfi
     )
 )]
 #[post("/login", format = "application/json", data = "<login_request>")]
-pub fn login(login_request: Json<LoginRequest>, pool: &State<Pool>, cookies: &CookieJar<'_> , config: &State<AuthConfig>) -> Result<Json<Response>, Custom<Json<Error>>> {
+pub fn login(login_request: Json<LoginRequest>, pool: &State<Pool>, cookies: &CookieJar<'_> , _config: &State<AuthConfig>) -> Result<Json<Response>, Custom<Json<Error>>> {
     let mut conn = pool.get().map_err(|_| Custom(Status::ServiceUnavailable, Json(Error { error: "Service Unavailable".to_string() })))?;
 
     let user = users::table
@@ -351,7 +353,7 @@ pub fn logout(cookies: &CookieJar<'_>, pool: &State<Pool>, user: AuthenticatedUs
     )
 )]
 #[get("/protected")]
-pub fn protected_route(user: AuthenticatedUser) -> String {
+pub fn protected_route(user: AuthenticatedUser ) -> String {
     format!("Welcome, {}. Your role is {}.", user.email, user.role)
 }
 
