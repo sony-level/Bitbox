@@ -1,17 +1,14 @@
 #[macro_use] extern crate rocket;
 extern crate diesel;
-
-mod handlers;
-mod utils;
-mod models;
-mod guard;
 use std::env;
-use crate::models::{AuthConfig};
 use rocket::{Build, Rocket};
-use crate::models::{ LoginRequest, LoginResponse, RegisterRequest};
 use utoipa::OpenApi;
-use crate::utils::fetch_jwks;
+use auth_service::handlers;
+use auth_service::models::{ LoginRequest, LoginResponse, RegisterRequest};
+use auth_service::models::AuthConfig;
+use auth_service::utils::fetch_jwks;
 
+use crate::handlers::token_confirm;
 #[derive(OpenApi)]
 #[openapi(
     paths(
@@ -33,7 +30,6 @@ use crate::utils::fetch_jwks;
     )
 )]
 struct ApiDoc;
-
 
 
 /**
