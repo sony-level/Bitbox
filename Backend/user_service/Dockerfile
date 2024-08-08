@@ -1,14 +1,24 @@
-FROM ubuntu:latest
-LABEL authors="sony-level"
+FROM rust:1.69 as builder
+
+LABEL authors="sony-level" \
+      description="Dockerfile pour l'application user_service"
 
 WORKDIR /app
 
 COPY Cargo.toml Cargo.lock ./
 
-COPY user_service ./user_service
+COPY src ./src
 
 RUN cargo build --release
 
-CMD ["./target/release/user_service"]
+FROM debian:buster-slim
 
+WORKDIR /app
+
+COPY --from=builder /app/target/release/user_service .
+
+EXPOSE 8000
+
+
+CMD ["./user_service"]
 
