@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_name VARCHAR(100) NOT NULL,
     class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
+    group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
     descriptions TEXT,
     start_date DATE,
     end_date DATE,
