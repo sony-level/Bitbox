@@ -51,7 +51,6 @@ pub fn health_checker_handler() -> Json<LogResponse> {
 * $ curl -X GET"http://localhost:8000/users" \
 -H "Authorization: Bearer <token>" \
 -H "Content-Type: application/json"
-
  */
 #[utoipa::path(
     get,
