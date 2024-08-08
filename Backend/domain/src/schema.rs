@@ -30,8 +30,7 @@ diesel::table! {
         #[max_length = 255]
         name -> Varchar,
         description -> Nullable<Text>,
-        start_date -> Date,
-        end_date -> Date,
+        created_by -> Uuid,
         created_at -> Nullable<Timestamp>,
         updated_at -> Nullable<Timestamp>,
     }
@@ -175,6 +174,7 @@ diesel::table! {
 diesel::joinable!(auth_tokens -> users (user_id));
 diesel::joinable!(class_users -> classes (class_id));
 diesel::joinable!(class_users -> users (user_id));
+diesel::joinable!(classes -> users (created_by));
 diesel::joinable!(evaluation_results -> projects (group_id));
 diesel::joinable!(evaluation_results -> users (user_id));
 diesel::joinable!(evaluations -> groups (group_id));
