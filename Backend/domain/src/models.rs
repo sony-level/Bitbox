@@ -17,7 +17,7 @@ use uuid::Uuid;
 use diesel::pg::{Pg ,PgValue};
 use diesel::serialize::{self, ToSql, Output};
 use diesel::deserialize::{self, FromSql, FromSqlRow};
-use diesel::sql_types::Text;
+use diesel::sql_types::{Uuid as DieselUuid, Varchar, Nullable, Timestamp , Text};
 use diesel::prelude::*;
 use diesel::backend::{Backend};
 use std::io::Write;
@@ -32,6 +32,17 @@ use crate::schema::users::jwt_secret;
 pub struct LogResponse {
     pub status: &'static str,
    pub  message: String,
+}
+
+#[derive(Serialize, Deserialize , ToSchema)]
+pub struct SuccessResponse<T> {
+    pub status: &'static str,
+    pub data: T,
+}
+#[derive(Serialize, Deserialize , ToSchema)]
+pub struct ErrorResponse {
+    pub status: &'static str,
+    pub message: &'static str,
 }
 
 /**
@@ -138,15 +149,14 @@ pub struct ClassUser {
  * Class model
  * la table classes contient les informations des classes
  */
-#[derive(Queryable, Debug, Identifiable, Deserialize, Serialize)] 
+#[derive(Queryable, Debug, Identifiable, Deserialize, Serialize, Insertable, ToSchema)]
 #[diesel(table_name = classes)]
 #[diesel(primary_key(id))]
 pub struct Class {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
-    pub start_date: NaiveDateTime,
-    pub end_date: NaiveDateTime,
+    pub created_by: Uuid,
     pub created_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
 }
@@ -251,6 +261,7 @@ pub struct Project {
     pub id: Uuid,
     pub project_name: String,
     pub class_id: Option<Uuid>,
+    pub group_id: Option<Uuid>,
     pub descriptions: Option<String>,
     pub start_date: Option<NaiveDateTime>,
     pub end_date: Option<NaiveDateTime>,
