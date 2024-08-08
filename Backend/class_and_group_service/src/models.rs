@@ -3,7 +3,6 @@ use diesel::Insertable;
 use rocket::serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-//use domain::models::*;
 use domain::schema::*;
 
 
