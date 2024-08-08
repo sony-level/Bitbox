@@ -54,11 +54,11 @@ fn rocket() -> _ {
     rocket::build()
         .manage(pool)
         .mount("/api", routes::routes())
-        .mount("/api/doc/openapi.json", routes![openapi_handler])
+        .mount("/api/doc/", routes![openapi_handler])
         .attach(rocket::fairing::AdHoc::on_ignite("OpenAPI Documentation", |rocket| {
             Box::pin(async move {
                 let openapi = ApiDoc::openapi();
-                rocket.mount("/", SwaggerUi::new("/api/docs/swagger-ui/<_..>").url("/api/docs/openapi.json", openapi.clone()))
+                rocket.mount("/", SwaggerUi::new("/api/docs/swagger-ui").url("/api/docs/openapi.json", openapi.clone()))
             })
         }))
 }
