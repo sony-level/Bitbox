@@ -1,5 +1,5 @@
 #!/bin/bash
-
+ 
 # Fonction pour afficher le logo
 afficher_logo() {
     printf "\n"
