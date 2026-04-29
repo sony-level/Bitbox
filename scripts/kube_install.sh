@@ -1,5 +1,5 @@
 #!/bin/bash
-
+ 
 set -euo pipefail
 
 # variables globales de l'installentation
